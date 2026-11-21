@@ -1,23 +1,41 @@
-"""Append newly drawn rounds to data/draws.json (run weekly by GitHub Actions)."""
-import json, urllib.request, sys, pathlib
-P = pathlib.Path(__file__).resolve().parent.parent / 'data' / 'draws.json'
+"""Append newly drawn rounds to data/draws.json (run by GitHub Actions)."""
+import json, urllib.request, pathlib, re
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+P = ROOT / 'data' / 'draws.json'
 if not P.exists():  # first run: start from the data embedded in index.html
-    import re
-    html = (P.parent.parent / 'index.html').read_text(encoding='utf-8')
+    html = (ROOT / 'index.html').read_text(encoding='utf-8')
     P.parent.mkdir(exist_ok=True)
     P.write_text(re.search(r'<script id="seed"[^>]*>(.*?)</script>', html, re.S).group(1).strip())
 data = json.loads(P.read_text())
-draws = data['draws']; nxt = max(int(k) for k in draws) + 1; added = 0
+draws = data['draws']
+UA = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.dhlottery.co.kr/lt645/result'}
+
+
+def get(url):
+    req = urllib.request.Request(url, headers=UA)
+    return json.loads(urllib.request.urlopen(req, timeout=20).read().decode('utf-8'))
+
+
+def fetch_round(n):
+    """Return [6 numbers sorted] + [bonus] for round n, or None if not drawn yet."""
+    js = get(f'https://www.dhlottery.co.kr/lt645/selectPstLt645InfoNew.do?srchDir=center&srchLtEpsd={n}')
+    for it in (js.get('data') or {}).get('list') or []:
+        if int(it.get('ltEpsd', 0)) == n:
+            return sorted(int(it[f'tm{i}WnNo']) for i in range(1, 7)) + [int(it['bnsWnNo'])]
+    return None
+
+
+added = 0
+nxt = max(int(k) for k in draws) + 1
 while True:
-    url = f'https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo={nxt}'
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        js = json.loads(urllib.request.urlopen(req, timeout=20).read().decode('utf-8'))
+        row = fetch_round(nxt)
     except Exception as e:
         print('stop:', e); break
-    if js.get('returnValue') != 'success': break
-    nums = sorted(js[f'drwtNo{i}'] for i in range(1, 7))
-    draws[str(nxt)] = nums + [js['bnusNo']]; print('added', nxt, draws[str(nxt)]); added += 1; nxt += 1
+    if not row:
+        break
+    draws[str(nxt)] = row; print('added', nxt, row); added += 1; nxt += 1
 if added:
     P.write_text(json.dumps(data, separators=(',', ':')))
 print('added rounds:', added)
