@@ -1,5 +1,5 @@
 // Service worker: offline use + versioned updates. Bump VERSION on every release.
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const CACHE = 'lotto-filter-' + VERSION;
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./lib/jsQR.js"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE))); });
