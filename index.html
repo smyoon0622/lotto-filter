@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.2";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.3";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -250,7 +250,12 @@ details td,details th{border:1px solid var(--line);padding:1px 6px;text-align:ce
 .err{color:var(--warn);font-size:12.5px;white-space:pre-wrap}
 .kv{display:inline-flex;gap:4px;align-items:center}
 header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.memo-btn{background:#fff;color:var(--navy);border:0;font-weight:700;white-space:nowrap}
+.memo-btn{background:#fff;color:#16213a;border:0;font-weight:700;white-space:nowrap;margin-left:auto;padding:5px 12px;font-size:13px}
+.rnd-rows{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.rnd-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rnd-l{color:var(--sub);font-size:13px;min-width:58px}
+.rnd-row b{min-width:52px}
+.pendb{background:#e9ecef;color:#495057;border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px}
 .memo{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.18);z-index:60;transform:translateX(105%);transition:transform .2s;display:flex;flex-direction:column}
 .memo.on{transform:none}
 .memo-h{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:#f8f9fa}
@@ -271,7 +276,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 <body>
 <header>
   <h1>로또 베이스 필터 생성기</h1>
-  <button id="btnMemo" class="memo-btn">📒 참고 메모</button>
 </header>
 <aside class="memo" id="memo" aria-hidden="true">
   <div class="memo-h"><b>📒 참고 메모</b><button id="btnMemoClose" class="small">닫기</button></div>
@@ -283,7 +287,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
     <table class="memo-t feat"><tr><th>구분</th><th>내용</th></tr><tr><td>1</td><td style="text-align:left">전회차 21번 다음 3끝 번호 85%이상 필출</td></tr><tr><td>2</td><td style="text-align:left">0,9끝 나오면 다음회차 28이 나올 가능성 90%이상 9끝이 확률이 더 좋음</td></tr><tr><td>3</td><td style="text-align:left">60회기 3구 끝수가 다다음회차에 나옴</td></tr><tr><td>4</td><td style="text-align:left">42가 6구로 나오면 다음회차 1끝수 나옴(약함)</td></tr><tr><td>5</td><td style="text-align:left">6구에 41번이 나오면 이월수가 반드시 있음</td></tr><tr><td>6</td><td style="text-align:left">쌍둥이수 22,33 다음회차 7끝 번호 80% 이상 필출</td></tr><tr><td>7</td><td style="text-align:left">12번 뒤 다음회차는 5끝 또는 1끝 출, 2회 이상 멸 없음</td></tr><tr><td>8</td><td style="text-align:left">35,187,218,349 회기는 2회기 이상 죽지 않음</td></tr><tr><td>9</td><td style="text-align:left">5회기 4,5,6구는 6회이상 미출후 필출</td></tr><tr><td>10</td><td style="text-align:left">18,20, 23, 56, 82, 94, 120, 152, 153, 164, 198, 264, 344회 3회이상 미출 없음</td></tr><tr><td>11</td><td style="text-align:left">91,107,173회기 4회이상 미출 없음</td></tr><tr><td>12</td><td style="text-align:left">3연번 후 이월수 또는 이웃수 나옴(3연번내)</td></tr><tr><td>13</td><td style="text-align:left">4연번 후 연번내 2개수</td></tr><tr><td>14</td><td style="text-align:left">1,2,3구 단수 후 나오는 10이상 1구 다음회수는 1,2,3구중에 나옴</td></tr><tr><td>15</td><td style="text-align:left">xx년 2월 8일 이월 필수는 1159회에서 나옴</td></tr><tr><td>16</td><td style="text-align:left">42번 2연속후 1,5끝수 필출</td></tr></table>
     <h3>조건별 1등 번호 포함 테스트 · 1052~1251회 (200회)</h3>
     <div class="muted" style="font-size:12px;margin-bottom:6px">회차마다 후보숫자에 그 회차 1등 번호가 몇 개 들어갔는지 실제로 센 결과. 1억선생은 데이터가 있는 193회 기준.</div>
-    <div class="wrap"><table class="memo-t"><tr><th>조건</th><th>회차</th><th>후보 수</th><th>1등 1개↑ 포함</th><th>무작위 기대</th><th>차이</th><th>1등 포함 개수별 %<br>0·1·2·3·4+</th><th>추천 범위</th><th>1등 / 조합 통과</th></tr><tr><th>이웃수전체</th><td>200</td><td>19.8</td><td>98%</td><td>98%</td><td>0%p</td><td>2 · 13 · 36 · 32 · 16</td><td>1-3</td><td>82% / 75%</td></tr><tr><th>모의번호필출</th><td>200</td><td>17.8</td><td>96%</td><td>95%</td><td>+1%p</td><td>4 · 18 · 30 · 28 · 22</td><td>1-4</td><td>92% / 91%</td></tr><tr><th>1억선생</th><td>193</td><td>19.9</td><td>96%</td><td>97%</td><td>-1%p</td><td>4 · 11 · 30 · 33 · 23</td><td>2-4</td><td>82% / 78%</td></tr><tr><th>4주0회출현</th><td>200</td><td>19.3</td><td>95%</td><td>97%</td><td>-2%p</td><td>5 · 14 · 27 · 30 · 24</td><td>2-5</td><td>80% / 82%</td></tr><tr><th>회기제외</th><td>200</td><td>16.6</td><td>94%</td><td>94%</td><td>0%p</td><td>6 · 25 · 30 · 25 · 14</td><td>1-3</td><td>80% / 82%</td></tr><tr><th>8주1회출현</th><td>200</td><td>17.4</td><td>94%</td><td>95%</td><td>0%p</td><td>6 · 20 · 28 · 31 · 16</td><td>0-3</td><td>85% / 84%</td></tr><tr><th>패턴</th><td>200</td><td>15.0</td><td>94%</td><td>90%</td><td class="up">+3%p</td><td>6 · 28 · 30 · 24 · 12</td><td>1-3</td><td>82% / 79%</td></tr><tr><th>전체숫자</th><td>200</td><td>13.9</td><td>93%</td><td>91%</td><td>+2%p</td><td>7 · 29 · 34 · 20 · 9</td><td>1-3</td><td>84% / 84%</td></tr><tr><th>멸구간</th><td>200</td><td>17.5</td><td>92%</td><td>92%</td><td>0%p</td><td>8 · 15 · 36 · 26 · 14</td><td>0-3</td><td>86% / 82%</td></tr><tr><th>이웃수2</th><td>200</td><td>11.4</td><td>86%</td><td>84%</td><td>+2%p</td><td>14 · 41 · 32 · 9 · 4</td><td>1-3</td><td>82% / 82%</td></tr><tr><th>예상수</th><td>200</td><td>11.3</td><td>84%</td><td>84%</td><td>0%p</td><td>16 · 38 · 26 · 18 · 2</td><td>1-3</td><td>82% / 81%</td></tr><tr><th>이웃수1</th><td>200</td><td>11.4</td><td>82%</td><td>84%</td><td>-2%p</td><td>18 · 40 · 29 · 13 · 0</td><td>1-3</td><td>82% / 82%</td></tr><tr><th>109회기</th><td>200</td><td>11.2</td><td>81%</td><td>84%</td><td class="dn">-3%p</td><td>19 · 33 · 32 · 13 · 3</td><td>0-2</td><td>84% / 85%</td></tr><tr><th>모의번호</th><td>200</td><td>7.0</td><td>68%</td><td>66%</td><td>+2%p</td><td>32 · 48 · 13 · 6 · 0</td><td>0-1</td><td>80% / 77%</td></tr><tr><th>39회기</th><td>200</td><td>6.0</td><td>63%</td><td>60%</td><td class="up">+3%p</td><td>37 · 44 · 18 · 1 · 0</td><td>0-1</td><td>81% / 82%</td></tr><tr><th>5회기</th><td>200</td><td>6.0</td><td>63%</td><td>60%</td><td class="up">+3%p</td><td>37 · 42 · 17 · 4 · 0</td><td>0-2</td><td>96% / 98%</td></tr><tr><th>출현중복</th><td>200</td><td>6.5</td><td>62%</td><td>62%</td><td>0%p</td><td>38 · 36 · 20 · 6 · 0</td><td>0-2</td><td>94% / 96%</td></tr><tr><th>2회기</th><td>200</td><td>6.0</td><td>60%</td><td>60%</td><td>0%p</td><td>40 · 42 · 16 · 2 · 0</td><td>0-1</td><td>83% / 82%</td></tr><tr><th>126회기</th><td>200</td><td>6.0</td><td>58%</td><td>60%</td><td>-1%p</td><td>42 · 40 · 17 · 2 · 0</td><td>0-1</td><td>82% / 82%</td></tr><tr><th>3회기</th><td>200</td><td>6.0</td><td>57%</td><td>60%</td><td>-2%p</td><td>42 · 44 · 12 · 2 · 0</td><td>0-1</td><td>86% / 82%</td></tr><tr><th>대각</th><td>200</td><td>4.9</td><td>45%</td><td>50%</td><td class="dn">-4%p</td><td>55 · 32 · 12 · 2 · 0</td><td>0-1</td><td>86% / 87%</td></tr></table></div>
+    <div class="wrap"><table class="memo-t"><tr><th>조건</th><th>회차</th><th>후보 수</th><th>1등 1개↑ 포함</th><th>무작위 기대</th><th>차이</th><th>1등 포함 개수별 %<br>0·1·2·3·4+</th><th>추천 범위</th><th>1등 / 조합 통과</th></tr><tr><th>이웃수전체</th><td>200</td><td>19.8</td><td>98%</td><td>98%</td><td>0%p</td><td>2 · 13 · 36 · 32 · 16</td><td>1-3</td><td>82% / 75%</td></tr><tr><th>모의번호필출</th><td>200</td><td>17.8</td><td>96%</td><td>95%</td><td>+1%p</td><td>4 · 18 · 30 · 28 · 22</td><td>1-4</td><td>92% / 91%</td></tr><tr><th>1억선생</th><td>193</td><td>19.9</td><td>96%</td><td>97%</td><td>-1%p</td><td>4 · 11 · 30 · 33 · 23</td><td>2-4</td><td>82% / 78%</td></tr><tr><th>4주0회출현</th><td>200</td><td>19.3</td><td>95%</td><td>97%</td><td>-2%p</td><td>5 · 14 · 27 · 30 · 24</td><td>2-5</td><td>80% / 82%</td></tr><tr><th>회기제외</th><td>200</td><td>16.6</td><td>94%</td><td>94%</td><td>0%p</td><td>6 · 25 · 30 · 25 · 14</td><td>1-3</td><td>80% / 82%</td></tr><tr><th>8주1회출현</th><td>200</td><td>17.4</td><td>94%</td><td>95%</td><td>0%p</td><td>6 · 20 · 28 · 31 · 16</td><td>0-3</td><td>85% / 84%</td></tr><tr><th>패턴</th><td>200</td><td>15.0</td><td>94%</td><td>90%</td><td class="up">+3%p</td><td>6 · 28 · 30 · 24 · 12</td><td>1-3</td><td>82% / 79%</td></tr><tr><th>전체숫자</th><td>200</td><td>13.9</td><td>93%</td><td>91%</td><td>+2%p</td><td>7 · 29 · 34 · 20 · 9</td><td>1-3</td><td>84% / 84%</td></tr><tr><th>두칸띄기</th><td>200</td><td>17.5</td><td>92%</td><td>92%</td><td>0%p</td><td>8 · 15 · 36 · 26 · 14</td><td>0-3</td><td>86% / 82%</td></tr><tr><th>이웃수2</th><td>200</td><td>11.4</td><td>86%</td><td>84%</td><td>+2%p</td><td>14 · 41 · 32 · 9 · 4</td><td>1-3</td><td>82% / 82%</td></tr><tr><th>예상수</th><td>200</td><td>11.3</td><td>84%</td><td>84%</td><td>0%p</td><td>16 · 38 · 26 · 18 · 2</td><td>1-3</td><td>82% / 81%</td></tr><tr><th>이웃수1</th><td>200</td><td>11.4</td><td>82%</td><td>84%</td><td>-2%p</td><td>18 · 40 · 29 · 13 · 0</td><td>1-3</td><td>82% / 82%</td></tr><tr><th>109회기</th><td>200</td><td>11.2</td><td>81%</td><td>84%</td><td class="dn">-3%p</td><td>19 · 33 · 32 · 13 · 3</td><td>0-2</td><td>84% / 85%</td></tr><tr><th>모의번호</th><td>200</td><td>7.0</td><td>68%</td><td>66%</td><td>+2%p</td><td>32 · 48 · 13 · 6 · 0</td><td>0-1</td><td>80% / 77%</td></tr><tr><th>39회기</th><td>200</td><td>6.0</td><td>63%</td><td>60%</td><td class="up">+3%p</td><td>37 · 44 · 18 · 1 · 0</td><td>0-1</td><td>81% / 82%</td></tr><tr><th>5회기</th><td>200</td><td>6.0</td><td>63%</td><td>60%</td><td class="up">+3%p</td><td>37 · 42 · 17 · 4 · 0</td><td>0-2</td><td>96% / 98%</td></tr><tr><th>출현중복</th><td>200</td><td>6.5</td><td>62%</td><td>62%</td><td>0%p</td><td>38 · 36 · 20 · 6 · 0</td><td>0-2</td><td>94% / 96%</td></tr><tr><th>2회기</th><td>200</td><td>6.0</td><td>60%</td><td>60%</td><td>0%p</td><td>40 · 42 · 16 · 2 · 0</td><td>0-1</td><td>83% / 82%</td></tr><tr><th>126회기</th><td>200</td><td>6.0</td><td>58%</td><td>60%</td><td>-1%p</td><td>42 · 40 · 17 · 2 · 0</td><td>0-1</td><td>82% / 82%</td></tr><tr><th>3회기</th><td>200</td><td>6.0</td><td>57%</td><td>60%</td><td>-2%p</td><td>42 · 44 · 12 · 2 · 0</td><td>0-1</td><td>86% / 82%</td></tr><tr><th>대각</th><td>200</td><td>4.9</td><td>45%</td><td>50%</td><td class="dn">-4%p</td><td>55 · 32 · 12 · 2 · 0</td><td>0-1</td><td>86% / 87%</td></tr></table></div>
     <ul class="memo-n">
       <li>1등 1개↑ 포함: 후보숫자 중 1등 번호가 1개라도 있었던 회차 비율 (통과 기준)</li>
       <li>무작위 기대: 1등 자리에 아무 번호 6개를 넣었을 때 같은 후보숫자에 1개라도 걸릴 확률 (계산값)</li>
@@ -303,8 +307,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
     <label class="kv">대상 회차 <select id="selRound"></select></label>
     <span class="muted" id="roundInfo"></span>
   </div>
-  <div class="row" style="margin-top:10px">
-    <span class="muted">전회차</span><span id="prevBalls" class="balls"></span>
+  <div class="rnd-rows">
+    <div class="rnd-row"><span class="rnd-l">대상 회차</span><b id="tgtLbl"></b><span id="tgtBalls" class="balls"></span></div>
+    <div class="rnd-row"><span class="rnd-l">전회차</span><b id="prevLbl"></b><span id="prevBalls" class="balls"></span></div>
   </div>
   <div class="row" style="margin-top:12px">
     <span class="muted">새 회차 당첨번호 추가 (<b id="nextRoundLbl"></b>회):</span>
@@ -521,7 +526,7 @@ def({id:'yesang', name:'예상수', src:'예상수 시트', range:[1,3], kind:'a
   compute(R){ const p = main6(R-1); if(!p) return {set:null};
     return {set:uniqSort(p.flatMap(n=>[wrap(n-3),wrap(n+3)])), html:`전회차 ${p.join(', ')} → −3, +3`}; }});
 
-def({id:'myeol', name:'멸구간', src:'멸구간 시트', range:[2,4], kind:'auto',
+def({id:'myeol', name:'두칸띄기', src:'멸구간 시트', range:[2,4], kind:'auto',
   desc:'전회차 1구 번호와 같은 1구가 나왔던 과거 회차의, 바로 다음 회차 1구 번호 모음.',
   compute(R){ const p = main6(R-1); if(!p) return {set:null};
     const x = p[0], out=[], seen=[];
@@ -612,7 +617,8 @@ function finalSet(f, R, res){
   return [...s].sort((a,b)=>a-b);
 }
 ST.names = ST.names || {};
-if(!ST.star) ST.star={all:true, yesang:true, h109:true, nb1:true, nb2:true, dup:true};
+if(!ST.star) ST.star={all:true, myeol:true, h109:true, nb1:true, nb2:true, dup:true};
+if(!ST.migStar2){ const k=Object.keys(ST.star).filter(x=>ST.star[x]).sort().join(','); if(k==='all,dup,h109,nb1,nb2,yesang'){ delete ST.star.yesang; ST.star.myeol=true; } ST.migStar2=true; }
 const starOf = id => !!ST.star[id];
 function nameOf(f){ return ST.names[f.id] || f.name; }
 ST.defaults = ST.defaults || {};
@@ -639,8 +645,9 @@ function renderTop(){
   let opts=''; for(let r=L+1;r>=300;r--) opts+=`<option value="${r}" ${r===cur?'selected':''}>${r}회${r===L+1?' (다음 추첨)':''}</option>`;
   sel.innerHTML=opts; R=cur;
   const d=drawDate(R);
-  $('roundInfo').textContent = `${d.getUTCFullYear()}.${d.getUTCMonth()+1}.${d.getUTCDate()} 추첨` + (DR[R]?` · 실제 당첨: ${DR[R].slice(0,6).join(', ')} + ${DR[R][6]}`:'');
-  $('prevBalls').innerHTML = `<b style="margin-right:4px">${R-1}회</b>`+balls(DR[R-1]);
+  $('roundInfo').textContent = `${d.getUTCFullYear()}.${d.getUTCMonth()+1}.${d.getUTCDate()} 추첨`;
+  $('tgtLbl').textContent = `${R}회`; $('tgtBalls').innerHTML = DR[R] ? balls(DR[R]) : '<span class="pendb">미추첨</span>';
+  $('prevLbl').textContent = `${R-1}회`; $('prevBalls').innerHTML = balls(DR[R-1]);
   $('nextRoundLbl').textContent = L+1;
 }
 
@@ -697,7 +704,8 @@ function renderSticky(){
   const el=$('stickyBar'); if(!el) return; const d=drawDate(R), ds=`${d.getUTCFullYear()}.${d.getUTCMonth()+1}.${d.getUTCDate()}`;
   const w=DR[R];
   el.innerHTML=`<b>대상</b><select id="stickySel">${$('selRound').innerHTML}</select><span class="sub">${ds} 추첨</span>`+(w?`<span class="balls">${w.slice(0,6).map(n=>ballHtml(n)).join('')}${ballHtml(w[6],true)}</span>`:`<span class="pend">미추첨</span>`)
-    +(RES&&RES.round!==R?`<span class="sub">· 아래 결과는 ${RES.round}회 기준입니다</span>`:'');
+    +(RES&&RES.round!==R?`<span class="sub">· 아래 결과는 ${RES.round}회 기준입니다</span>`:'')+`<button id="btnMemo" class="memo-btn">📒 참고 메모</button>`;
+  $('btnMemo').onclick=()=>memoOpen(!$('memo').classList.contains('on'));
   const s=$('stickySel'); s.value=String(R); s.onchange=()=>{ setRound(+s.value); };
 }
 function dropResultConds(){ const before=ST.conds.length; ST.conds=ST.conds.filter(c=>c.src==='base'); $('ticketText').value=''; $('ticketSum').textContent=''; $('ticketMsg').textContent=''; if(ST.conds.length!==before){ save(); toast('회차가 바뀌어 베이스 조건 외의 조건을 모두 지웠습니다'); } renderTicketState(); }
@@ -830,9 +838,9 @@ function renderFS(){
   h.push(`<div class="fs-sec"><div class="fs-h">위치(자리수) · 출현 대상수 (쉼표 구분, 숫자 또는 숫자범위)</div>
     ${(()=>{ const s=ST.fs.pos1||{}, m=myeolPos(R);
       return `<div class="fs-row"><label class="fs-l"><input type="checkbox" data-fs="pos1" ${s.on?'checked':''}> <span>첫번째 자리</span></label>${s.link
-        ? `<input type="text" value="${m?m.join(','):'멸구간 데이터 없음'}" readonly title="3단계 멸구간 카드의 ${R}회 후보숫자" style="background:#f1f3f5">`
+        ? `<input type="text" value="${m?m.join(','):'두칸띄기 데이터 없음'}" readonly title="3단계 두칸띄기 카드의 ${R}회 후보숫자" style="background:#f1f3f5">`
         : `<input type="text" data-fsv="pos1" value="${(s.v||'').replace(/"/g,'&quot;')}" placeholder="1-15">`}</div>
-        <div style="margin:-2px 0 6px 26px;font-size:12px"><label class="kv"><input type="checkbox" data-fslink="pos1" ${s.link?'checked':''}> 3단계 멸구간과 연동 <span class="muted">(${R}회 멸구간 후보숫자를 그대로 사용 · 회차마다 자동으로 바뀜)</span></label></div>`; })()}
+        <div style="margin:-2px 0 6px 26px;font-size:12px"><label class="kv"><input type="checkbox" data-fslink="pos1" ${s.link?'checked':''}> 3단계 두칸띄기와 연동 <span class="muted">(${R}회 두칸띄기 후보숫자를 그대로 사용 · 회차마다 자동으로 바뀜)</span></label></div>`; })()}
     ${['두번째','세번째','네번째','다섯번째','여섯번째'].map((l,j)=>{ const i=j+1; return fsRow('pos'+(i+1),l+' 자리',['2-41, 2-37','3-42, 3-39','4-43, 5-43','5-44, 9-44','6-45, 19-45'][j]); }).join('')}</div>`);
   h.push(`<div class="fs-sec"><div class="fs-h">10단위 5그룹</div>
     ${G10.map((g,i)=>fsRow('d'+i,`${g.label}: ${g.nums.map(pad2).join(',')}`,'0-3')).join('')}
@@ -881,7 +889,7 @@ function buildFS(RR){ if(RR===undefined) RR=R;
   RUNS.forEach(([k,l])=>{ if(on('run'+k)){ cfg.runEx.push(k); names.push(l+' 제거'); } });
   cfg.runInc=[]; cfg.runAny=on('incAny'); RUNS.forEach(([k,l])=>{ if(k && on('inc'+k)){ cfg.runInc.push(k); names.push(l+' 포함'); } }); if(cfg.runAny) names.push('연번 있음');
   for(let i=0;i<6;i++){ const nm=['첫','두','세','네','다섯','여섯'][i]+'번째 자리';
-    if(i===0 && fs.pos1 && fs.pos1.link){ if(on('pos1')){ const m=myeolPos(RR); if(m){ cfg.pos[0]=parseSpec(m.join(','),1,45); names.push(nm+'(멸구간)'); } } continue; }
+    if(i===0 && fs.pos1 && fs.pos1.link){ if(on('pos1')){ const m=myeolPos(RR); if(m){ cfg.pos[0]=parseSpec(m.join(','),1,45); names.push(nm+'(두칸띄기)'); } } continue; }
     cfg.pos[i]=spec('pos'+(i+1),1,45,nm); }
   const gsets=[['d',G10,'dcnt','10단위'],['h',GH,'hcnt','가로줄'],['v',GV,'vcnt','세로줄'],['e',GE,'ecnt','끝수']];
   gsets.forEach(([p,G,cid,nm])=>{ G.forEach((g,i)=>grp(p+i,g.nums,`${nm} ${g.label||g.nums.map(pad2).join(',')}`)); const a=spec(cid,0,10,nm+' 그룹수'); if(a) cfg.gcount.push({id:cid, sets:G.map(g=>g.nums), allow:a, name:nm+' 그룹수', spec:fs[cid].v}); });
@@ -1358,7 +1366,7 @@ function diagCombo(c){
   if(cfg.sum) rows.push({fix:{t:'spec', id:'sum', v:sum}, grp:'2단계 필터설정', name:'당번합계', cand:'', val:sum, rng:FSV.sum.v, pass:al(cfg.sum,sum)});
   if(cfg.ac) rows.push({fix:{t:'spec', id:'ac', v:ac}, grp:'2단계 필터설정', name:'AC값', cand:'', val:ac, rng:FSV.ac.v, pass:al(cfg.ac,ac)});
   if(cfg.endsum) rows.push({fix:{t:'spec', id:'endsum', v:es}, grp:'2단계 필터설정', name:'끝수합계', cand:'', val:es, rng:FSV.endsum.v, pass:al(cfg.endsum,es)});
-  cfg.pos.forEach((a,i)=>{ if(a) rows.push({fix:{t:'spec', id:'pos'+(i+1), v:c[i]}, grp:'2단계 필터설정', name:`${i+1}번째 자리`, cand:'', val:c[i], rng:(i===0&&FSV.pos1&&FSV.pos1.link)?posSpecText(0,R)+' (멸구간)':FSV['pos'+(i+1)].v, pass:!!a[c[i]]}); });
+  cfg.pos.forEach((a,i)=>{ if(a) rows.push({fix:{t:'spec', id:'pos'+(i+1), v:c[i]}, grp:'2단계 필터설정', name:`${i+1}번째 자리`, cand:'', val:c[i], rng:(i===0&&FSV.pos1&&FSV.pos1.link)?posSpecText(0,R)+' (두칸띄기)':FSV['pos'+(i+1)].v, pass:!!a[c[i]]}); });
   cfg.groups.forEach(g=>{ const k=ov(g.nums); rows.push({fix:{t:'spec', id:g.id, v:k}, grp:'2단계 필터설정', name:g.name, cand:g.nums.join(','), val:`${k}개`, rng:g.spec, pass:!!g.allow[k]}); });
   cfg.gcount.forEach(g=>{ const k=g.sets.filter(s=>s.some(x=>S.has(x))).length; rows.push({fix:{t:'spec', id:g.id, v:k}, grp:'2단계 필터설정', name:g.name, cand:'', val:`${k}그룹`, rng:g.spec, pass:!!g.allow[k]}); });
   if(cfg.runEx.length){ const runs=[]; let L=1; for(let i=1;i<6;i++){ if(c[i]===c[i-1]+1) L++; else { if(L>1) runs.push(L); L=1; } } if(L>1) runs.push(L); runs.sort((a,b)=>b-a);
@@ -1547,7 +1555,7 @@ function renderBT(rows){
 (function(){ const box=$('memo'), ta=$('memoText');
   ta.value=ST.memo||'';
   const open=on=>{ box.classList.toggle('on',on); box.setAttribute('aria-hidden',on?'false':'true'); };
-  $('btnMemo').addEventListener('click',()=>open(!box.classList.contains('on')));
+  window.memoOpen=open;
   $('btnMemoClose').addEventListener('click',()=>open(false));
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') open(false); });
   let t=null; ta.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(()=>{ ST.memo=ta.value; save(); $('memoSaved').textContent='저장됨 '+new Date().toLocaleTimeString(); },400); });
@@ -1614,7 +1622,7 @@ function standaloneInit(){
     const bar=$('updBar'); bar.innerHTML=`<span>새 버전 <b>${v.version}</b>이 있습니다${v.notes?` · ${v.notes}`:''}</span><button id="btnUpd">업데이트</button><button class="x" id="btnUpdX">나중에</button>`; bar.style.display='flex';
     $('btnUpdX').onclick=()=>bar.style.display='none';
     $('btnUpd').onclick=async ()=>{ $('btnUpd').textContent='받는 중…';
-      try{ if(REG){ await REG.update(); const w=REG.waiting||REG.installing; if(w){ w.postMessage('skipWaiting'); setTimeout(()=>location.reload(),3000); return; } } }catch(e){}
+      try{ if(REG){ await REG.update(); const w=REG.waiting||REG.installing; if(w){ w.postMessage('skipWaiting'); setTimeout(()=>location.reload(),4000); return; } } }catch(e){}
       location.reload(); };
   }).catch(()=>{});
 }
