@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.1";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.2";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -786,7 +786,7 @@ const GE = [1,2,3,4,5,6,7,8,9,0].map(d=>({nums:[...Array(45)].map((_,i)=>i+1).fi
 function fsDefaults(){
   const d = { his1:{on:false}, his2:{on:false}, his3:{on:false},
     carry:{on:false,v:''}, carryB:{on:true,v:'0-3'}, sum:{on:false,v:'150-160'}, ac:{on:false,v:''}, endsum:{on:false,v:''},
-    pos1:{on:true,v:'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,19,20,21,22,30'}, pos2:{on:false,v:''}, pos3:{on:false,v:''}, pos4:{on:false,v:''}, pos5:{on:false,v:''}, pos6:{on:false,v:''},
+    pos1:{on:true,v:'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,19,20,21,22,30',link:true}, pos2:{on:false,v:''}, pos3:{on:false,v:''}, pos4:{on:false,v:''}, pos5:{on:false,v:''}, pos6:{on:false,v:''},
     dcnt:{on:false,v:''}, hcnt:{on:true,v:'3-6'}, vcnt:{on:true,v:'3-6'}, ecnt:{on:false,v:''} };
   RUNS.forEach(([k])=>d['run'+k]={on:k==='5'||k==='6'});
   RUNS.forEach(([k])=>d['inc'+k]={on:false}); d.incAny={on:false};
@@ -797,6 +797,10 @@ function fsDefaults(){
   return d;
 }
 ST.fs = Object.assign(fsDefaults(), ST.fs || {});
+if(!ST.migPos1){ if(ST.fs.pos1) ST.fs.pos1.link=true; ST.migPos1=true; }
+// 첫 번째 자리: 3단계 멸구간 카드의 후보숫자와 연동 (대상 회차마다 바뀜)
+function myeolPos(RR){ const f=F.find(x=>x.id==='myeol'); if(!f) return null; let res; try{ res=f.compute(RR); }catch(e){ return null; } const s=finalSet(f,RR,res); return s&&s.length?s:null; }
+function posSpecText(i,RR){ const s=ST.fs['pos'+(i+1)]||{}; if(i===0&&s.link){ const m=myeolPos(RR===undefined?R:RR); return m?m.join(','):''; } return s.v||''; }
 if(!ST.migHV36){ ['hcnt','vcnt'].forEach(k=>{ if(ST.fs[k] && ST.fs[k].v==='5-6') ST.fs[k].v='3-6'; }); ST.migHV36=true; }
 function fsRow(id, label, ph, noInput){ const s=ST.fs[id]||{on:false,v:''};
   return `<div class="fs-row"><label class="fs-l"><input type="checkbox" data-fs="${id}" ${s.on?'checked':''}> <span>${label}</span></label>${noInput?'':`<input type="text" data-fsv="${id}" value="${(s.v||'').replace(/"/g,'&quot;')}" placeholder="${ph||''}">`}</div>`; }
@@ -824,7 +828,12 @@ function renderFS(){
   h.push(`<div class="fs-sec"><div class="fs-h">연번 (체크시 포함)</div><div class="fs-grid">${fsChk('incAny','연번 있음 (형태 무관)','2연번 이상이 하나라도 있는 조합')}${RUNS.filter(r=>r[0]).map(([k,l,n])=>fsChk('inc'+k,l,pct(n))).join('')}</div>
     <div class="muted" style="font-size:12px;margin-top:4px">하나라도 체크하면 체크한 형태의 연번이 있는 조합만 남습니다 (여러 개 체크 시 그중 하나면 통과)</div></div>`);
   h.push(`<div class="fs-sec"><div class="fs-h">위치(자리수) · 출현 대상수 (쉼표 구분, 숫자 또는 숫자범위)</div>
-    ${['첫번째','두번째','세번째','네번째','다섯번째','여섯번째'].map((l,i)=>fsRow('pos'+(i+1),l+' 자리',['1-15','2-41, 2-37','3-42, 3-39','4-43, 5-43','5-44, 9-44','6-45, 19-45'][i])).join('')}</div>`);
+    ${(()=>{ const s=ST.fs.pos1||{}, m=myeolPos(R);
+      return `<div class="fs-row"><label class="fs-l"><input type="checkbox" data-fs="pos1" ${s.on?'checked':''}> <span>첫번째 자리</span></label>${s.link
+        ? `<input type="text" value="${m?m.join(','):'멸구간 데이터 없음'}" readonly title="3단계 멸구간 카드의 ${R}회 후보숫자" style="background:#f1f3f5">`
+        : `<input type="text" data-fsv="pos1" value="${(s.v||'').replace(/"/g,'&quot;')}" placeholder="1-15">`}</div>
+        <div style="margin:-2px 0 6px 26px;font-size:12px"><label class="kv"><input type="checkbox" data-fslink="pos1" ${s.link?'checked':''}> 3단계 멸구간과 연동 <span class="muted">(${R}회 멸구간 후보숫자를 그대로 사용 · 회차마다 자동으로 바뀜)</span></label></div>`; })()}
+    ${['두번째','세번째','네번째','다섯번째','여섯번째'].map((l,j)=>{ const i=j+1; return fsRow('pos'+(i+1),l+' 자리',['2-41, 2-37','3-42, 3-39','4-43, 5-43','5-44, 9-44','6-45, 19-45'][j]); }).join('')}</div>`);
   h.push(`<div class="fs-sec"><div class="fs-h">10단위 5그룹</div>
     ${G10.map((g,i)=>fsRow('d'+i,`${g.label}: ${g.nums.map(pad2).join(',')}`,'0-3')).join('')}
     ${fsRow('dcnt','10단위 5그룹에 대한 그룹수 필터','1-5, 3-5')}</div>`);
@@ -840,6 +849,9 @@ function renderFS(){
   $('fsBox').innerHTML = h.join('');
 }
 $('fsBox').addEventListener('change', e=>{ const t=e.target;
+  if(t.dataset.fslink){ const s=ST.fs[t.dataset.fslink]=ST.fs[t.dataset.fslink]||{on:true,v:''};
+    if(!t.checked && s.link){ const m=myeolPos(R); if(m) s.v=m.join(','); }   // 연동 해제 시 현재 멸구간 숫자를 직접 입력값으로 남김
+    s.link=t.checked; save(); renderFS(); return; }
   if(t.dataset.fs){ (ST.fs[t.dataset.fs]=ST.fs[t.dataset.fs]||{v:''}).on=t.checked; }
   else if(t.dataset.fsv){ const s=ST.fs[t.dataset.fsv]=ST.fs[t.dataset.fsv]||{on:false}; s.v=t.value.trim(); }
   save(); });
@@ -868,7 +880,9 @@ function buildFS(RR){ if(RR===undefined) RR=R;
   cfg.sum=spec('sum',0,255,'당번합계'); cfg.ac=spec('ac',0,10,'AC값'); cfg.endsum=spec('endsum',0,60,'끝수합계');
   RUNS.forEach(([k,l])=>{ if(on('run'+k)){ cfg.runEx.push(k); names.push(l+' 제거'); } });
   cfg.runInc=[]; cfg.runAny=on('incAny'); RUNS.forEach(([k,l])=>{ if(k && on('inc'+k)){ cfg.runInc.push(k); names.push(l+' 포함'); } }); if(cfg.runAny) names.push('연번 있음');
-  for(let i=0;i<6;i++) cfg.pos[i]=spec('pos'+(i+1),1,45,['첫','두','세','네','다섯','여섯'][i]+'번째 자리');
+  for(let i=0;i<6;i++){ const nm=['첫','두','세','네','다섯','여섯'][i]+'번째 자리';
+    if(i===0 && fs.pos1 && fs.pos1.link){ if(on('pos1')){ const m=myeolPos(RR); if(m){ cfg.pos[0]=parseSpec(m.join(','),1,45); names.push(nm+'(멸구간)'); } } continue; }
+    cfg.pos[i]=spec('pos'+(i+1),1,45,nm); }
   const gsets=[['d',G10,'dcnt','10단위'],['h',GH,'hcnt','가로줄'],['v',GV,'vcnt','세로줄'],['e',GE,'ecnt','끝수']];
   gsets.forEach(([p,G,cid,nm])=>{ G.forEach((g,i)=>grp(p+i,g.nums,`${nm} ${g.label||g.nums.map(pad2).join(',')}`)); const a=spec(cid,0,10,nm+' 그룹수'); if(a) cfg.gcount.push({id:cid, sets:G.map(g=>g.nums), allow:a, name:nm+' 그룹수', spec:fs[cid].v}); });
   if(on('his1')||on('his2')||on('his3')){
@@ -1344,7 +1358,7 @@ function diagCombo(c){
   if(cfg.sum) rows.push({fix:{t:'spec', id:'sum', v:sum}, grp:'2단계 필터설정', name:'당번합계', cand:'', val:sum, rng:FSV.sum.v, pass:al(cfg.sum,sum)});
   if(cfg.ac) rows.push({fix:{t:'spec', id:'ac', v:ac}, grp:'2단계 필터설정', name:'AC값', cand:'', val:ac, rng:FSV.ac.v, pass:al(cfg.ac,ac)});
   if(cfg.endsum) rows.push({fix:{t:'spec', id:'endsum', v:es}, grp:'2단계 필터설정', name:'끝수합계', cand:'', val:es, rng:FSV.endsum.v, pass:al(cfg.endsum,es)});
-  cfg.pos.forEach((a,i)=>{ if(a) rows.push({fix:{t:'spec', id:'pos'+(i+1), v:c[i]}, grp:'2단계 필터설정', name:`${i+1}번째 자리`, cand:'', val:c[i], rng:FSV['pos'+(i+1)].v, pass:!!a[c[i]]}); });
+  cfg.pos.forEach((a,i)=>{ if(a) rows.push({fix:{t:'spec', id:'pos'+(i+1), v:c[i]}, grp:'2단계 필터설정', name:`${i+1}번째 자리`, cand:'', val:c[i], rng:(i===0&&FSV.pos1&&FSV.pos1.link)?posSpecText(0,R)+' (멸구간)':FSV['pos'+(i+1)].v, pass:!!a[c[i]]}); });
   cfg.groups.forEach(g=>{ const k=ov(g.nums); rows.push({fix:{t:'spec', id:g.id, v:k}, grp:'2단계 필터설정', name:g.name, cand:g.nums.join(','), val:`${k}개`, rng:g.spec, pass:!!g.allow[k]}); });
   cfg.gcount.forEach(g=>{ const k=g.sets.filter(s=>s.some(x=>S.has(x))).length; rows.push({fix:{t:'spec', id:g.id, v:k}, grp:'2단계 필터설정', name:g.name, cand:'', val:`${k}그룹`, rng:g.spec, pass:!!g.allow[k]}); });
   if(cfg.runEx.length){ const runs=[]; let L=1; for(let i=1;i<6;i++){ if(c[i]===c[i-1]+1) L++; else { if(L>1) runs.push(L); L=1; } } if(L>1) runs.push(L); runs.sort((a,b)=>b-a);
@@ -1377,7 +1391,7 @@ function specInclude(text, v){
 function fixLabel(fx){
   if(fx.t==='cond') return `→ ${fx.lo}-${fx.hi}`;
   if(fx.t==='items') return `→ 세부 ${fx.list.length}개 범위 넓힘`;
-  if(fx.t==='spec'){ const s=ST.fs[fx.id]; return `→ ${specInclude(s?s.v:'', fx.v)}`; }
+  if(fx.t==='spec'){ const s=ST.fs[fx.id]; const base=(fx.id==='pos1'&&s&&s.link)?posSpecText(0):(s?s.v:''); return `→ ${specInclude(base, fx.v)}${fx.id==='pos1'&&s&&s.link?' (연동 해제)':''}`; }
   if(fx.t==='off') return '→ 체크 해제';
   if(fx.t==='on') return `→ ${fx.lbl} 포함 체크`;
   if(fx.t==='incoff') return '→ 연번 포함 체크 모두 해제';
@@ -1390,7 +1404,7 @@ function applyFix(fx){
     toast(`${c.name} 범위를 ${fx.lo}-${fx.hi}로 바꿨습니다`); }
   else if(fx.t==='items'){ const c=ST.conds.find(x=>x.id===fx.id); if(!c||!c.items) return toast('조건을 찾을 수 없습니다');
     fx.list.forEach(o=>{ const it=c.items[o.j]; if(it){ it.min=Math.min(it.min,o.k); it.max=Math.max(it.max,o.k); } }); toast(`${c.name}의 세부 조건 ${fx.list.length}개 범위를 넓혔습니다`); }
-  else if(fx.t==='spec'){ const s=ST.fs[fx.id]; s.v=specInclude(s.v, fx.v); renderFS(); toast(`필터설정 값을 "${s.v}"로 바꿨습니다`); }
+  else if(fx.t==='spec'){ const s=ST.fs[fx.id]; if(fx.id==='pos1'&&s.link){ s.v=posSpecText(0); s.link=false; } s.v=specInclude(s.v, fx.v); renderFS(); toast(`필터설정 값을 "${s.v}"로 바꿨습니다`); }
   else if(fx.t==='off'){ if(ST.fs[fx.id]) ST.fs[fx.id].on=false; renderFS(); toast('해당 필터설정 체크를 해제했습니다'); }
   else if(fx.t==='on'){ (ST.fs[fx.id]=ST.fs[fx.id]||{}).on=true; renderFS(); toast(`연번 포함에 ${fx.lbl}을(를) 체크했습니다`); }
   else if(fx.t==='incoff'){ Object.keys(ST.fs).forEach(k=>{ if(k.startsWith('inc')) ST.fs[k].on=false; }); renderFS(); toast('연번 포함 체크를 모두 해제했습니다'); }
@@ -1527,6 +1541,8 @@ function renderBT(rows){
 }
 
 
+// 멸구간 카드 숫자가 바뀌면 2단계 첫 번째 자리(연동)도 다시 그림
+{ const _rc=renderCards; renderCards=function(){ _rc.apply(this,arguments); if($('fsBox')&&ST.fs.pos1&&ST.fs.pos1.link) renderFS(); }; }
 /* ---------- 참고 메모 ---------- */
 (function(){ const box=$('memo'), ta=$('memoText');
   ta.value=ST.memo||'';
