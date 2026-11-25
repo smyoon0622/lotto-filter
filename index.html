@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.5";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.6";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -80,6 +80,22 @@ details td,details th{border:1px solid var(--line);padding:1px 6px;text-align:ce
 .inbox{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
 .inbox input[type=text]{width:100%;font-family:"JetBrains Mono",monospace;font-size:12.5px}
 .savebar{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11.5px}
+.pinw{position:relative;display:inline-block;margin-left:4px;vertical-align:middle}
+.pin{background:none;border:0;padding:0 2px;font-size:14px;cursor:pointer;opacity:.25;filter:grayscale(1)}
+tr:hover .pin,.pin:focus{opacity:.7}
+.pin.has{opacity:1;filter:none}
+.notepop{display:none;position:absolute;left:0;top:22px;z-index:40;width:230px;background:#fff8c4;border:1px solid #e6cf5a;border-radius:4px;box-shadow:2px 4px 12px rgba(0,0,0,.18);padding:8px;font-size:12.5px;font-weight:400;white-space:pre-wrap;text-align:left;transform:rotate(-1deg)}
+.pinw:hover .notepop,.pinw.show .notepop,.notepop.on{display:block}
+.notepop textarea{width:100%;box-sizing:border-box;min-height:70px;border:1px solid #e6cf5a;background:#fffdf0;font:inherit;font-size:12.5px;resize:vertical}
+.notepop .nbtn{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
+.selbar{gap:6px;flex-wrap:wrap}
+.vrow .vchk{margin:0 2px 0 0;width:16px;height:16px;flex:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:6px;font-weight:400}
+.seg button{border:0;border-radius:0;background:#fff;padding:3px 10px;font-size:12.5px;color:var(--sub)}
+.seg button.on{background:var(--navy);color:#fff;font-weight:700}
+.fs-off{opacity:.4;pointer-events:none}
+.fsstate{font-size:12.5px;padding:3px 10px;border-radius:999px;background:#e7f5ff;color:#1864ab;cursor:pointer;white-space:nowrap}
+.fsstate.off{background:#fff0f0;color:#c92a2a}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .sw{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid #e6e9ee}
@@ -343,7 +359,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 </section>
 
 <section class="panel">
-  <h2><span class="step">2</span> 필터설정</h2>
+  <h2><span class="step">2</span> 필터설정 <span class="seg" id="fsAllSeg"><button data-fsall="1">전체 적용</button><button data-fsall="0">적용 안 함</button></span></h2>
   <div class="muted" style="margin-bottom:8px">체크한 필터만 적용됩니다. 체크 항목(역대 당첨, 연번)은 해당하는 조합을 제거하고, 입력 항목은 적은 범위만 남깁니다. 범위는 <code>0-3</code>, 여러 개는 쉼표(<code>0-1, 3-4</code>), 느낌표는 제외(<code>!2</code>, <code>!10-20</code>)입니다.</div>
   <div class="row" style="margin-bottom:8px"><button class="small" id="btnFsReset">이미지 기본값으로 되돌리기</button><button class="small" id="btnFsOff">전체 해제</button></div>
   <div id="fsBox" class="fs"></div>
@@ -382,7 +398,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 
 <section class="panel">
   <h2><span class="step">4</span> 사용자 정의 필터(조건 목록) · 전체 조합 필터링 <span class="round-badge" id="condRound"></span></h2>
-  <div class="muted">실행하면 <b>현재 대상 회차</b> 기준으로 베이스 조건(3단계 카드 값)을 다시 읽고, 체크된 조건 + 2단계 필터설정 + 1단계 제외·고정 숫자를 모두 만족하는 조합만 남깁니다. 결과 조합·5게임 그룹은 묶음 한 줄로 들어가며 범위는 묶음 안 조합 하나하나에 적용됩니다. 회차를 바꾸면 베이스 외 조건은 지워집니다.</div>
+  
   <div class="row" style="margin:10px 0">
     <button id="btnUseBase">현재 베이스 조건 가져오기</button>
     <span style="flex:1"></span>
@@ -397,7 +413,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
       <span class="kv"><button class="small" id="btnBulkOn">모두 사용</button><button class="small" id="btnBulkOff">모두 해제</button></span></span>
   </div>
   <div class="ctable-wrap"><table class="ctable"><thead><tr><th>사용</th><th>출현범위</th><th>후보수</th><th>개수</th><th>필터명</th><th>출처</th><th></th></tr></thead><tbody id="condBody"></tbody></table></div>
-  <div class="row" style="margin-top:12px"><button class="primary big" id="btnRun">조합 필터링 실행</button><span class="muted" id="runNote"></span></div>
+  <div class="row" style="margin-top:12px"><button class="primary big" id="btnRun">조합 필터링 실행</button><span class="fsstate" id="fsState"></span><span class="muted" id="runNote"></span></div>
   <details class="diag" id="diagBox"><summary><b>조합 진단</b> — 특정 번호가 어떤 조건에서 걸러지는지 확인</summary>
     <div class="row" style="margin:8px 0"><input type="text" id="diagIn" placeholder="예: 1 5 18 23 27 28" style="width:220px"><button class="small" id="btnDiagWin">결과 회차 1등 번호 넣기</button><button class="small primary" id="btnDiag">진단</button><span class="muted" id="diagSum"></span></div>
     <div id="diagOut"></div>
@@ -423,6 +439,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
     <div>
       <div class="row" style="justify-content:space-between;margin-bottom:6px">
         <span class="muted">결과 조합 (1조합씩 · 스크롤) <span class="rankline" id="rankBox"></span></span>
+        <span class="kv selbar"><button class="small" id="btnSelAll">전체 선택</button><button class="small" id="btnSelNone">전체 해제</button><button class="small primary" id="btnExport">txt 내보내기</button><span class="muted" id="selInfo"></span></span>
         <span class="kv">출현범위 <input type="number" id="addMin" value="0" min="0" max="6" style="width:44px">-<input type="number" id="addMax" value="3" min="0" max="6" style="width:44px">
           <button class="small primary" id="btnAddAll">전체 결과를 조건에 추가</button></span>
       </div>
@@ -890,7 +907,7 @@ function parseSpec(text, lo, hi){
   return al;
 }
 function buildFS(RR){ if(RR===undefined) RR=R;
-  const fs=ST.fs, on=id=>fs[id]&&fs[id].on, cfg={groups:[], gcount:[], runEx:[], pos:[null,null,null,null,null,null], hist:null}, errs=[], names=[];
+  const fs=ST.fs, on=id=>ST.fsAll!==false&&fs[id]&&fs[id].on, cfg={groups:[], gcount:[], runEx:[], pos:[null,null,null,null,null,null], hist:null}, errs=[], names=[];
   const spec=(id,lo,hi,nm)=>{ if(!on(id)) return null; try{ const a=parseSpec(fs[id].v,lo,hi); if(a) names.push(nm); return a; }catch(e){ errs.push(`${nm}: ${e.message}`); return null; } };
   const grp=(id,nums,nm)=>{ const a=spec(id,0,6,nm); if(a) cfg.groups.push({nums, allow:a, name:nm, spec:fs[id].v, id}); };
   const P=DR[RR-1];
@@ -946,6 +963,15 @@ function condLines(c){ if(c.combos){ const a=[]; for(let i=0,k=1;i<c.combos.leng
   return [`${c.min}-${c.max} ${c.nums.join(',')} #${c.name}`]; }
 const OPEN = new Set();
 function renderTicketState(){ const tp=$('ticketPanel'); if(tp) tp.classList.toggle('missing', !ST.conds.some(c=>c.src==='ticket')); }
+/* ---------- 조건명 옆 포스트잇 메모 ---------- */
+ST.notes = ST.notes || {};
+let NOTE_EDIT=null;
+const noteKey = c => c.fid ? 'f:'+c.fid : 'c:'+c.id;
+const escH = t => String(t).replace(/[&<>"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+function noteHtml(c){ const k=noteKey(c), t=ST.notes[k]||'', ed=NOTE_EDIT===k;
+  return `<span class="pinw${ed?' editing':''}"><button class="pin${t?' has':''}" data-pin="${k}" title="${t?'메모 보기 · 누르면 고정':'메모 붙이기'}">📝</button>`+
+    (ed ? `<div class="notepop on"><textarea data-ntext="${k}" placeholder="잠깐 적어 둘 메모">${escH(t)}</textarea><div class="nbtn"><button class="small primary" data-nsave="${k}">저장</button><button class="small" data-ncancel="1">취소</button>${t?`<button class="small" data-ndel="${k}">삭제</button>`:''}</div></div>`
+        : t ? `<div class="notepop"><div class="nt">${escH(t)}</div><div class="nbtn"><button class="small" data-nedit="${k}">수정</button><button class="small" data-ndel="${k}">삭제</button></div></div>` : '')+`</span>`; }
 function renderConds(){
   renderTicketState();
   const rows = ST.conds.map((c,i)=>{
@@ -956,7 +982,7 @@ function renderConds(){
     <td class="nowrap">${rng}</td>
     <td>${bd?`<button class="btn-link" data-open="${c.id}">${open?'▾':'▸'} 세부 조건 ${n.toLocaleString()}개 ${open?'닫기':'보기'}</button> <span class="muted">${c.desc||''}</span>`:`<input type="text" data-k="nums" value="${c.nums.join(',')}" class="numsin">`}</td>
     <td class="cnt">${c.loading?'불러오는 중':bd?n.toLocaleString()+'개':c.nums.length}</td>
-    <td><b>${c.name}</b>${c.src==='base'&&c.nodata?' <span class="muted">(데이터 없음)</span>':''}</td>
+    <td><b>${c.name}</b>${noteHtml(c)}${c.src==='base'&&c.nodata?' <span class="muted">(데이터 없음)</span>':''}</td>
     <td><span class="tag ${c.src==='base'?'auto':'man'}">${SRC_LBL[c.src]||c.src}${c.src==='base'?' '+c.round+'회':''}</span></td>
     <td><button class="small" data-del="${i}">삭제</button></td></tr>`;
     if(bd && open){ const it = c.combos ? (()=>{ const a=[], m=Math.min(c.combos.length/6,300); for(let j=0;j<m;j++) a.push({min:c.min,max:c.max,nums:Array.from(c.combos.subarray(j*6,j*6+6)),name:c.name+(j+1)}); a.length0=c.combos.length/6; return a; })() : bundleItems(c), lim=Math.min(it.length,300);
@@ -969,6 +995,7 @@ function renderConds(){
   $('condCnt').textContent = ST.conds.length; $('condOn').textContent = ST.conds.filter(c=>c.on).length;
 }
 $('condBody').addEventListener('change', e=>{
+  if(e.target.dataset.ntext!==undefined) return;   // 메모 입력칸은 저장 버튼으로만 처리
   const tr=e.target.closest('tr'); if(!tr||tr.dataset.i===undefined) return; const c=ST.conds[+tr.dataset.i];
   if(e.target.dataset.ii!==undefined){
     if(c.combos){ const j=+e.target.dataset.ii, ik=e.target.dataset.ik;
@@ -986,6 +1013,14 @@ $('condBody').addEventListener('change', e=>{
   save(); renderConds();
 });
 $('condBody').addEventListener('click', e=>{ const cs=e.target.dataset.cstar; if(cs!==undefined){ const c=ST.conds.find(x=>x.id===+cs); if(c){ if(c.fid) ST.star[c.fid]=!ST.star[c.fid]; else c.star=!c.star; save(); renderConds(); } return; } });
+$('condBody').addEventListener('click', e=>{ const d=e.target.dataset;
+  if(d.pin!==undefined){ const w=e.target.closest('.pinw'); if(ST.notes[d.pin] && !w.classList.contains('show')){ document.querySelectorAll('.pinw.show').forEach(x=>x.classList.remove('show')); w.classList.add('show'); return; } NOTE_EDIT=d.pin; renderConds(); const ta=document.querySelector(`[data-ntext="${d.pin}"]`); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); } return; }
+  if(d.nedit!==undefined){ NOTE_EDIT=d.nedit; renderConds(); const ta=document.querySelector(`[data-ntext="${d.nedit}"]`); if(ta) ta.focus(); return; }
+  if(d.nsave!==undefined){ const v=document.querySelector(`[data-ntext="${d.nsave}"]`).value.trim(); if(v) ST.notes[d.nsave]=v; else delete ST.notes[d.nsave]; NOTE_EDIT=null; save(); renderConds(); return; }
+  if(d.ncancel!==undefined){ NOTE_EDIT=null; renderConds(); return; }
+  if(d.ndel!==undefined){ delete ST.notes[d.ndel]; NOTE_EDIT=null; save(); renderConds(); toast('메모를 지웠습니다'); return; }
+});
+document.addEventListener('click', e=>{ if(!e.target.closest('.pinw')) document.querySelectorAll('.pinw.show').forEach(x=>x.classList.remove('show')); });
 $('condBody').addEventListener('click', e=>{ const o=e.target.dataset.open; if(o!==undefined){ const id=+o; if(OPEN.has(id)) OPEN.delete(id); else OPEN.add(id); renderConds(); } });
 $('condBody').addEventListener('click', e=>{ const d=e.target.dataset.del; if(d===undefined) return; const c=ST.conds[+d]; if(c&&c.src==='base'){ ST.enabled[c.fid]=false; save(); renderCards(); renderConds(); toast(`#${c.name}: 베이스 조건은 지우는 대신 꺼 둡니다 (체크하면 다시 사용)`); return; } ST.conds.splice(+d,1); save(); renderConds(); });
 $('btnUseBase').addEventListener('click', ()=>{
@@ -1142,11 +1177,34 @@ function renderVList(){
   if(!n){ sp.innerHTML='<div class="muted" style="padding:10px">남은 조합이 없습니다.</div>'; return; }
   const top=box.scrollTop, h=box.clientHeight||480; const a=Math.max(0,Math.floor(top/ROWH)-8), b=Math.min(n,Math.ceil((top+h)/ROWH)+8);
   const full=Math.floor(n/5)*5;
-  let out=''; for(let i=a;i<b;i++){ const g=Math.floor(i/5); out+=`<div class="vrow ${g%2?'godd':''}${i===HL?' hl':''}" style="top:${i*ROWH}px"><span class="vg ${i>=full?'x':''}">${i>=full?'그룹 외':'G'+(g+1)+'-'+(i%5+1)}</span><span class="vno">${(i+1).toLocaleString()}</span>
+  if(SEL.res!==RES) selReset();
+  let out=''; for(let i=a;i<b;i++){ const g=Math.floor(i/5); out+=`<div class="vrow ${g%2?'godd':''}${i===HL?' hl':''}${isSel(i)?' sel':''}" style="top:${i*ROWH}px"><input type="checkbox" class="vchk" data-vi="${i}" ${isSel(i)?'checked':''}><span class="vg ${i>=full?'x':''}">${i>=full?'그룹 외':'G'+(g+1)+'-'+(i%5+1)}</span><span class="vno">${(i+1).toLocaleString()}</span>
     <span class="balls">${comboArr(i).map(x=>ballHtml(x)).join('')}</span>${WINIDX===i?'<b style="color:#e8590c;font-size:12px">1등</b>':''}</div>`; }
   sp.innerHTML=out;
 }
 $('vlist').addEventListener('scroll', ()=>requestAnimationFrame(renderVList));
+/* ---------- 결과 조합 선택 · txt 내보내기 ---------- */
+const SEL={res:null, all:false, x:new Set()};   // all=true면 x는 '선택 해제한' 조합, false면 '선택한' 조합
+function selReset(){ SEL.res=RES; SEL.all=false; SEL.x.clear(); selInfo(); }
+const isSel=i=>SEL.all ? !SEL.x.has(i) : SEL.x.has(i);
+const selCount=()=>{ if(!RES) return 0; const n=RES.data.length/6; return SEL.all ? n-SEL.x.size : SEL.x.size; };
+function selInfo(){ const el=$('selInfo'); if(!el) return; const c=selCount(); el.textContent = RES&&RES.data.length ? (c?`${c.toLocaleString()}개 선택 · 선택한 것만 내보냄`:'선택 없음 · 내보내면 전체') : ''; }
+$('vlist').addEventListener('change', e=>{ const i=e.target.dataset.vi; if(i===undefined) return; const n=+i;
+  if(SEL.all===e.target.checked) SEL.x.delete(n); else SEL.x.add(n);
+  e.target.closest('.vrow').classList.toggle('sel', e.target.checked); selInfo(); });
+$('btnSelAll').addEventListener('click', ()=>{ if(!RES) return toast('먼저 필터링을 실행하세요'); SEL.res=RES; SEL.all=true; SEL.x.clear(); renderVList(); selInfo(); });
+$('btnSelNone').addEventListener('click', ()=>{ SEL.res=RES; SEL.all=false; SEL.x.clear(); renderVList(); selInfo(); });
+$('btnExport').addEventListener('click', ()=>{
+  if(!RES||!RES.data.length) return toast('내보낼 결과 조합이 없습니다');
+  const n=RES.data.length/6, useSel=selCount()>0, parts=[]; let buf=[], cnt=0;
+  for(let i=0;i<n;i++){ if(useSel && !isSel(i)) continue; const o=i*6, d=RES.data;
+    buf.push(d[o]+','+d[o+1]+','+d[o+2]+','+d[o+3]+','+d[o+4]+','+d[o+5]); cnt++;
+    if(buf.length>=200000){ parts.push(buf.join('\n')+'\n'); buf=[]; } }
+  if(buf.length) parts.push(buf.join('\n')+'\n');
+  const url=URL.createObjectURL(new Blob(parts,{type:'text/plain'})), a=document.createElement('a');
+  a.href=url; a.download=`${RES.round}회_결과조합_${cnt}개.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000);
+  toast(`${cnt.toLocaleString()}개 조합을 txt로 내보냈습니다`);
+});
 function addRange(){ return [Math.max(0,Math.min(6,+$('addMin').value||0)), Math.max(0,Math.min(6,+$('addMax').value||0))]; }
 $('btnAddAll').addEventListener('click', ()=>{
   if(!RES||!RES.total) return toast('먼저 필터링을 실행하세요');
@@ -1566,6 +1624,14 @@ function renderBT(rows){
 
 // 멸구간 카드 숫자가 바뀌면 2단계 첫 번째 자리(연동)도 다시 그림
 { const _rc=renderCards; renderCards=function(){ _rc.apply(this,arguments); if($('fsBox')&&ST.fs.pos1&&ST.fs.pos1.link) renderFS(); }; }
+/* ---------- 2단계 필터설정 전체 적용 / 적용 안 함 ---------- */
+function renderFsAll(){ const onAll=ST.fsAll!==false;
+  document.querySelectorAll('#fsAllSeg button').forEach(b=>b.classList.toggle('on', (b.dataset.fsall==='1')===onAll));
+  const sec=$('fsBox'); if(sec) sec.classList.toggle('fs-off', !onAll);
+  const st=$('fsState'); if(st){ st.textContent = onAll?'2단계 필터설정 적용 중':'2단계 필터설정 적용 안 함'; st.classList.toggle('off', !onAll); } }
+$('fsAllSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; e.stopPropagation(); ST.fsAll = b.dataset.fsall==='1'; save(); renderFsAll(); toast(ST.fsAll?'2단계 필터설정을 적용합니다':'2단계 필터설정을 모두 적용하지 않습니다 (설정값은 그대로 보관)'); });
+$('fsState').addEventListener('click', ()=>{ ST.fsAll = ST.fsAll===false; save(); renderFsAll(); });
+renderFsAll();
 /* ---------- 참고 메모 ---------- */
 (function(){ const box=$('memo'), ta=$('memoText');
   ta.value=ST.memo||'';
