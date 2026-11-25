@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.7";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.8";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -89,6 +89,7 @@ tr:hover .pin,.pin:focus{opacity:.7}
 .notepop textarea{width:100%;box-sizing:border-box;min-height:70px;border:1px solid #e6cf5a;background:#fffdf0;font:inherit;font-size:12.5px;resize:vertical}
 .notepop .nbtn{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
 .selbar{gap:6px;flex-wrap:wrap}
+.viewseg{margin-left:0}.viewseg span{font-weight:400;font-size:11.5px}
 .addcond{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;margin:0 0 10px;background:#f8f9fa;border:1px dashed var(--line);border-radius:8px;font-size:13px}
 .vrow .vchk{margin:0 2px 0 0;width:16px;height:16px;flex:none}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:6px;font-weight:400}
@@ -447,9 +448,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
     <div>
       <div class="row" style="justify-content:space-between;margin-bottom:6px">
         <span class="muted">결과 조합 (1조합씩 · 스크롤) <span class="rankline" id="rankBox"></span></span>
+        <span class="seg viewseg" id="viewSeg"><button data-view="res" class="on">결과 조합 <span id="vcRes"></span></button><button data-view="inv">반대 후보군 <span id="vcInv"></span></button></span>
         <span class="kv selbar"><button class="small" id="btnSelAll">전체 선택</button><button class="small" id="btnSelNone">전체 해제</button><button class="small primary" id="btnExport">txt 내보내기</button><span class="muted" id="selInfo"></span></span>
         <span class="kv">출현범위 <input type="number" id="addMin" value="0" min="0" max="6" style="width:44px">-<input type="number" id="addMax" value="3" min="0" max="6" style="width:44px">
-          <button class="small primary" id="btnAddAll">전체 결과를 조건에 추가</button></span>
+          <button class="small primary" id="btnAddAll">결과 조합 전체를 조건에 추가</button></span>
       </div>
       <div class="grpbar">
         <b>5게임 그룹</b> <span class="muted" id="grpInfo">결과를 5게임씩 묶습니다</span><br>
@@ -1189,44 +1191,74 @@ onmessage = e => {
 let RES = null, worker = null, HL = -1, WINIDX = -1;
 const ROWH = 38;
 function comboArr(i){ return Array.from(RES.data.subarray(i*6,i*6+6)); }
+/* ---------- 반대 후보군 (전체 8,145,060개 중 결과에 없는 조합) ---------- */
+const TOTAL=8145060; let VIEW='res', INV=null;
+const BN=(()=>{ const t=[]; for(let n=0;n<=45;n++){ t[n]=[]; for(let k=0;k<=6;k++) t[n][k]= k===0?1 : n===0?0 : t[n-1][k-1]+t[n-1][k]; } return t; })();
+function lexRank(d,o){ let r=0, prev=0; for(let i=0;i<6;i++){ for(let v=prev+1; v<d[o+i]; v++) r+=BN[45-v][5-i]; prev=d[o+i]; } return r; }
+function lexUnrank(r){ const out=[]; let v=1; for(let i=0;i<6;i++){ for(;;){ const c=BN[45-v][5-i]; if(r<c){ out.push(v); v++; break; } r-=c; v++; } } return out; }
+function invPrep(){ if(INV&&INV.res===RES) return INV; const m=RES.data.length/6, rk=new Uint32Array(m); let sorted=true;
+  for(let i=0;i<m;i++){ rk[i]=lexRank(RES.data,i*6); if(i&&rk[i]<rk[i-1]) sorted=false; } if(!sorted) rk.sort();
+  let win=-1; const w=DR[RES.round]; if(w&&!RES.watchIdx){ const wr=lexRank(Uint8Array.from(w.slice(0,6).sort((a,b)=>a-b)),0); let lo=0,hi=m; while(lo<hi){ const md=(lo+hi)>>1; if(rk[md]<wr) lo=md+1; else hi=md; } win=wr-lo; }
+  INV={res:RES, rk, n:TOTAL-m, win}; return INV; }
+function invRankAt(i){ const rk=INV.rk; let lo=0, hi=rk.length; while(lo<hi){ const md=(lo+hi)>>1; if(rk[md]-md<=i) lo=md+1; else hi=md; } return i+lo; }
+const viewN=()=> !RES?0 : VIEW==='inv' ? invPrep().n : RES.data.length/6;
+const viewCombo=i=> VIEW==='inv' ? lexUnrank(invRankAt(i)) : comboArr(i);
+const viewWin=()=> VIEW==='inv' ? (invPrep().win) : WINIDX;
+// 지금 보는 목록을 순서대로 돌며 cb(index, Uint8Array(6), offset)
+function forEachView(cb){
+  if(VIEW!=='inv'){ const d=RES.data, n=d.length/6; for(let i=0;i<n;i++) cb(i,d,i*6); return; }
+  const rk=invPrep().rk, t=new Uint8Array(6); let r=0, p=0, i=0;
+  for(let a=1;a<=40;a++) for(let b=a+1;b<=41;b++) for(let c=b+1;c<=42;c++) for(let d=c+1;d<=43;d++) for(let e=d+1;e<=44;e++) for(let f=e+1;f<=45;f++,r++){
+    if(p<rk.length&&rk[p]===r){ p++; continue; } t[0]=a;t[1]=b;t[2]=c;t[3]=d;t[4]=e;t[5]=f; cb(i++,t,0); } }
+function renderViewSeg(){ const m=RES?RES.data.length/6:0;
+  $('vcRes').textContent = RES?`${m.toLocaleString()}개`:''; $('vcInv').textContent = RES?`${(TOTAL-m).toLocaleString()}개`:'';
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on', b.dataset.view===VIEW));
+  $('btnAddAll').textContent = VIEW==='inv' ? '반대 후보군 전체를 조건에 추가' : '결과 조합 전체를 조건에 추가'; }
 function renderVList(){
-  const box=$('vlist'), sp=$('vspacer'); if(!RES){ sp.style.height='0'; sp.innerHTML=''; return; }
-  const n=RES.data.length/6; sp.style.height=(n*ROWH)+'px';
+  const box=$('vlist'), sp=$('vspacer'); renderViewSeg(); if(!RES){ sp.style.height='0'; sp.innerHTML=''; return; }
+  if(VIEW==='inv' && !(INV&&INV.res===RES) && RES.data.length/6>300000){ sp.style.height='0'; sp.innerHTML='<div class="muted" style="padding:10px">반대 후보군을 계산하는 중…</div>'; setTimeout(()=>{ invPrep(); renderVList(); },30); return; }
+  const n=viewN(), WI=viewWin(); sp.style.height=(n*ROWH)+'px';
   if(!n){ sp.innerHTML='<div class="muted" style="padding:10px">남은 조합이 없습니다.</div>'; return; }
   const top=box.scrollTop, h=box.clientHeight||480; const a=Math.max(0,Math.floor(top/ROWH)-8), b=Math.min(n,Math.ceil((top+h)/ROWH)+8);
   const full=Math.floor(n/5)*5;
-  if(SEL.res!==RES) selReset();
+  if(SEL.res!==RES||SEL.view!==VIEW) selReset();
   let out=''; for(let i=a;i<b;i++){ const g=Math.floor(i/5); out+=`<div class="vrow ${g%2?'godd':''}${i===HL?' hl':''}${isSel(i)?' sel':''}" style="top:${i*ROWH}px"><input type="checkbox" class="vchk" data-vi="${i}" ${isSel(i)?'checked':''}><span class="vg ${i>=full?'x':''}">${i>=full?'그룹 외':'G'+(g+1)+'-'+(i%5+1)}</span><span class="vno">${(i+1).toLocaleString()}</span>
-    <span class="balls">${comboArr(i).map(x=>ballHtml(x)).join('')}</span>${WINIDX===i?'<b style="color:#e8590c;font-size:12px">1등</b>':''}</div>`; }
+    <span class="balls">${viewCombo(i).map(x=>ballHtml(x)).join('')}</span>${WI===i?'<b style="color:#e8590c;font-size:12px">1등</b>':''}</div>`; }
   sp.innerHTML=out;
 }
 $('vlist').addEventListener('scroll', ()=>requestAnimationFrame(renderVList));
+$('viewSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b||b.dataset.view===VIEW) return; VIEW=b.dataset.view; $('vlist').scrollTop=0; renderVList(); selInfo(); });
 /* ---------- 결과 조합 선택 · txt 내보내기 ---------- */
 const SEL={res:null, all:false, x:new Set()};   // all=true면 x는 '선택 해제한' 조합, false면 '선택한' 조합
-function selReset(){ SEL.res=RES; SEL.all=false; SEL.x.clear(); selInfo(); }
+function selReset(){ SEL.res=RES; SEL.view=VIEW; SEL.all=false; SEL.x.clear(); selInfo(); }
 const isSel=i=>SEL.all ? !SEL.x.has(i) : SEL.x.has(i);
-const selCount=()=>{ if(!RES) return 0; const n=RES.data.length/6; return SEL.all ? n-SEL.x.size : SEL.x.size; };
-function selInfo(){ const el=$('selInfo'); if(!el) return; const c=selCount(); el.textContent = RES&&RES.data.length ? (c?`${c.toLocaleString()}개 선택 · 선택한 것만 내보냄`:'선택 없음 · 내보내면 전체') : ''; }
+const selCount=()=>{ if(!RES) return 0; const n=viewN(); return SEL.all ? n-SEL.x.size : SEL.x.size; };
+function selInfo(){ const el=$('selInfo'); if(!el) return; const c=selCount(); el.textContent = RES&&viewN() ? (c?`${c.toLocaleString()}개 선택 · 선택한 것만 내보냄`:'선택 없음 · 내보내면 전체') : ''; }
 $('vlist').addEventListener('change', e=>{ const i=e.target.dataset.vi; if(i===undefined) return; const n=+i;
   if(SEL.all===e.target.checked) SEL.x.delete(n); else SEL.x.add(n);
   e.target.closest('.vrow').classList.toggle('sel', e.target.checked); selInfo(); });
-$('btnSelAll').addEventListener('click', ()=>{ if(!RES) return toast('먼저 필터링을 실행하세요'); SEL.res=RES; SEL.all=true; SEL.x.clear(); renderVList(); selInfo(); });
-$('btnSelNone').addEventListener('click', ()=>{ SEL.res=RES; SEL.all=false; SEL.x.clear(); renderVList(); selInfo(); });
+$('btnSelAll').addEventListener('click', ()=>{ if(!RES) return toast('먼저 필터링을 실행하세요'); SEL.res=RES; SEL.view=VIEW; SEL.all=true; SEL.x.clear(); renderVList(); selInfo(); });
+$('btnSelNone').addEventListener('click', ()=>{ SEL.res=RES; SEL.view=VIEW; SEL.all=false; SEL.x.clear(); renderVList(); selInfo(); });
 $('btnExport').addEventListener('click', ()=>{
-  if(!RES||!RES.data.length) return toast('내보낼 결과 조합이 없습니다');
-  const n=RES.data.length/6, useSel=selCount()>0, parts=[]; let buf=[], cnt=0;
-  for(let i=0;i<n;i++){ if(useSel && !isSel(i)) continue; const o=i*6, d=RES.data;
+  if(!RES||!viewN()) return toast('내보낼 조합이 없습니다');
+  const useSel=selCount()>0, parts=[]; let buf=[], cnt=0;
+  forEachView((i,d,o)=>{ if(useSel && !isSel(i)) return;
     buf.push(d[o]+','+d[o+1]+','+d[o+2]+','+d[o+3]+','+d[o+4]+','+d[o+5]); cnt++;
-    if(buf.length>=200000){ parts.push(buf.join('\n')+'\n'); buf=[]; } }
+    if(buf.length>=200000){ parts.push(buf.join('\n')+'\n'); buf=[]; } });
   if(buf.length) parts.push(buf.join('\n')+'\n');
   const url=URL.createObjectURL(new Blob(parts,{type:'text/plain'})), a=document.createElement('a');
-  a.href=url; a.download=`${RES.round}회_결과조합_${cnt}개.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000);
+  a.href=url; a.download=`${RES.round}회_${VIEW==='inv'?'반대후보군':'결과조합'}_${cnt}개.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000);
   toast(`${cnt.toLocaleString()}개 조합을 txt로 내보냈습니다`);
 });
 function addRange(){ return [Math.max(0,Math.min(6,+$('addMin').value||0)), Math.max(0,Math.min(6,+$('addMax').value||0))]; }
 $('btnAddAll').addEventListener('click', ()=>{
   if(!RES||!RES.total) return toast('먼저 필터링을 실행하세요');
-  const [a,b]=addRange(); const n=RES.data.length/6;
+  const [a,b]=addRange();
+  if(VIEW==='inv'){ const n=invPrep().n; if(!n) return toast('반대 후보군이 없습니다');
+    const flat=new Uint8Array(n*6); forEachView((i,d,o)=>{ flat.set(d.subarray?d.subarray(o,o+6):d.slice(o,o+6), i*6); });
+    ST.conds.push({id:++condSeq, on:true, src:'combo', min:a, max:b, nums:[], combos:flat, name:'반대후보군', desc:`${RES.round}회 반대 후보군 ${n.toLocaleString()}개와 겹치는 개수`}); save(); renderConds();
+    return toast(`반대 후보군 ${n.toLocaleString()}개를 ${a}-${b} 조건 묶음으로 추가했습니다`); }
+  const n=RES.data.length/6;
   ST.conds.push({id:++condSeq, on:true, src:'combo', min:a, max:b, nums:[], combos:RES.data.slice(), name:'결과조합', desc:`${RES.round}회 결과 조합 ${n.toLocaleString()}개와 겹치는 개수`}); save(); renderConds();
   toast(`결과 조합 ${n.toLocaleString()}개를 ${a}-${b} 조건 묶음으로 추가했습니다`);
 });
@@ -1527,7 +1559,7 @@ $('diagOut').insertAdjacentHTML('beforebegin','');
 function diagRound(){ return RES ? RES.round : R; }
 function autoDiag(){ const RR=diagRound(), w=DR[RR]; if(w && ($('diagBox').open || $('diagOut').innerHTML)){ $('diagIn').value=w.slice(0,6).join(' '); runDiag(); } else { $('diagOut').innerHTML=''; $('diagSum').textContent=''; } }
 $('btnDiagWin').addEventListener('click', ()=>{ const RR=diagRound(), w=DR[RR]; if(!w) return toast(`${RR}회는 아직 추첨 전입니다`); $('diagIn').value=w.slice(0,6).join(' '); $('diagBox').open=true; runDiag(); });
-$('rankBox').addEventListener('click', e=>{ if(e.target.dataset.goto){ const i=+e.target.dataset.goto-1; $('vlist').scrollTop=Math.max(0,i*ROWH-ROWH*3); renderVList(); HL=i; setTimeout(()=>{HL=-1; renderVList();},2500); return; } if(e.target.dataset.diagwin!==undefined){ $('btnDiagWin').click(); $('diagBox').scrollIntoView({behavior:'smooth',block:'center'}); } });
+$('rankBox').addEventListener('click', e=>{ if(e.target.dataset.goto){ if(VIEW!=='res'){ VIEW='res'; } const i=+e.target.dataset.goto-1; $('vlist').scrollTop=Math.max(0,i*ROWH-ROWH*3); renderVList(); HL=i; setTimeout(()=>{HL=-1; renderVList();},2500); return; } if(e.target.dataset.diagwin!==undefined){ $('btnDiagWin').click(); $('diagBox').scrollIntoView({behavior:'smooth',block:'center'}); } });
 
 
 /* ---------- reduction recommendation ---------- */
