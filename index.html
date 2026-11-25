@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.4";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.5";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -79,6 +79,7 @@ details td,details th{border:1px solid var(--line);padding:1px 6px;text-align:ce
 .hit.in{color:var(--ok)}.hit.out{color:var(--warn)}
 .inbox{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
 .inbox input[type=text]{width:100%;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+.savebar{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11.5px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--sub)}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .sw{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid #e6e9ee}
@@ -370,7 +371,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
       <span>한 장(5게임) 숫자</span><span class="range"><input type="number" id="tkS0" value="2" min="0" max="6">-<input type="number" id="tkS1" value="4" min="0" max="6"></span>
       <span>전체 게임 숫자</span><span class="range"><input type="number" id="tkA0" value="5" min="0" max="6">-<input type="number" id="tkA1" value="6" min="0" max="6"></span>
     </div>
-    <div class="meta"><button class="small primary" id="btnTicketAdd">조건 추가하기</button><span class="muted" id="ticketSum"></span></div>
+    <div class="meta"><button class="small primary" id="btnTicketAdd">조건 추가하기</button><button class="small" id="btnTicketSave">저장</button><span class="muted" id="ticketSum"></span></div>
   </div>
 </div>
   <div class="cards-h" style="margin-top:18px">자동 생성 필터</div>
@@ -575,7 +576,7 @@ def({id:'dup', name:'출현중복', src:'8주1회출현 ∩ 4주0회출현', ran
 def({id:'eok', name:'1억선생', src:'1억선생 시트 (세로)', range:[1,4], kind:'manual',
   desc:'회차별 1억선생 후보숫자. 직접 입력합니다.',
   compute(R){ const v=eokFor(R);
-    return {set:v?uniqSort(v):null, html:`<div class="inbox">후보숫자 입력 (공백·쉼표 구분)<input type="text" data-eok="${R}" value="${v?v.join(' '):''}" placeholder="예: 1 4 5 6 11 13 ..."></div>`}; }});
+    return {set:v?uniqSort(v):null, html:`<div class="inbox">후보숫자 입력 (공백·쉼표 구분)<input type="text" data-eok="${R}" value="${v?v.join(' '):''}" placeholder="예: 1 4 5 6 11 13 ..."><div class="savebar"><button class="small primary" data-savecard="1">저장</button><span class="muted">입력하면 이 기기에 자동 저장 · 버튼으로 바로 저장</span></div></div>`}; }});
 
 const nb1 = a => a.flatMap(n=>[n-1<1?45:n-1, n+1>45?1:n+1]);
 def({id:'nb1', name:'이웃수1', src:'이웃수검증 I~T', range:[1,2], kind:'auto', desc:'전회차 당첨번호 ±1.',
@@ -587,7 +588,7 @@ def({id:'nball', name:'이웃수전체', src:'이웃수1 + 이웃수2', range:[1
 
 function mockInputs(R){ const a=mockFor(R), b=mockFor(R-1);
   return `<div class="inbox">${R}회 모의번호 7개<input type="text" data-mock="${R}" value="${a?a.join(' '):''}">
-    ${R-1}회 모의번호 7개 (필출 계산용)<input type="text" data-mock="${R-1}" value="${b?b.join(' '):''}"></div>`; }
+    ${R-1}회 모의번호 7개 (필출 계산용)<input type="text" data-mock="${R-1}" value="${b?b.join(' '):''}"><div class="savebar"><button class="small primary" data-savecard="1">저장</button><span class="muted">입력하면 이 기기에 자동 저장 · 버튼으로 바로 저장</span></div></div>`; }
 def({id:'mock', name:'모의번호', src:'모의번호 K~Q', range:[0,3], kind:'manual', desc:'해당 회차 모의번호 7개. 직접 입력합니다.',
   compute(R){ const a=mockFor(R); return {set:a?uniqSort(a):null, html:mockInputs(R)}; }});
 def({id:'mockp', name:'모의번호필출', src:'모의번호 BH~CR', range:[1,4], kind:'manual',
@@ -710,7 +711,8 @@ function renderSticky(){
   $('btnMemo').onclick=()=>memoOpen(!$('memo').classList.contains('on'));
   const s=$('stickySel'); s.value=String(R); s.onchange=()=>{ setRound(+s.value); };
 }
-function dropResultConds(){ const before=ST.conds.length; ST.conds=ST.conds.filter(c=>c.src==='base'); $('ticketText').value=''; $('ticketSum').textContent=''; $('ticketMsg').textContent=''; if(ST.conds.length!==before){ save(); toast('회차가 바뀌어 베이스 조건 외의 조건을 모두 지웠습니다'); } renderTicketState(); }
+function loadTicketText(){ $('ticketText').value=(ST.ticketText&&ST.ticketText[R])||''; $('ticketSum').textContent=''; $('ticketMsg').textContent=''; if($('ticketText').value) parseTickets(true); }
+function dropResultConds(){ const before=ST.conds.length; ST.conds=ST.conds.filter(c=>c.src==='base'); loadTicketText(); if(ST.conds.length!==before){ save(); toast('회차가 바뀌어 베이스 조건 외의 조건을 모두 지웠습니다'); } renderTicketState(); }
 function setRound(r){ if(r===R) return; R=r; dropResultConds(); renderAll(); if(RES) renderRank(); renderRoundInfo(); renderConds(); }
 function renderAll(){ renderTop(); renderCards(); renderFS(); renderSticky(); if(typeof renderSlip==='function' && $('slip')) renderSlip(); }
 
@@ -728,7 +730,13 @@ $('cardsWrap').addEventListener('click', e=>{
     if(inFinal){ if(base.has(n)) o.rem.push(n); } else { if(!base.has(n)) o.add.push(n); }
     save(); renderCards(); return; }
   const rs=e.target.dataset.reset; if(rs){ if(ST.over[R]) delete ST.over[R][rs]; save(); renderCards(); }
+  if(e.target.dataset.savecard){ const box=e.target.closest('.inbox'); let bt=false;
+    box.querySelectorAll('input[data-eok],input[data-mock]').forEach(i=>{ if(i.dataset.eok) ST.eok[i.dataset.eok]=uniqSort(parseNums(i.value)); else ST.mock[i.dataset.mock]=parseNums(i.value); bt=true; });
+    save(); if(bt) recomputeBT(); renderCards(); toast('이 기기 브라우저에 저장했습니다'); }
 });
+// 직접 입력 칸: 타자 치는 동안에도 잠깐 멈추면 바로 저장 (화면은 칸을 벗어날 때 다시 계산)
+{ let tm=null; $('cardsWrap').addEventListener('input', e=>{ const ds=e.target.dataset; if(!(ds.eok||ds.mock)) return;
+  clearTimeout(tm); tm=setTimeout(()=>{ if(ds.eok) ST.eok[ds.eok]=uniqSort(parseNums(e.target.value)); else ST.mock[ds.mock]=parseNums(e.target.value); save(); },500); }); }
 $('cardsWrap').addEventListener('change', e=>{
   const t=e.target, ds=t.dataset; let bt=false;
   if(ds.fname){ const f=F.find(x=>x.id===ds.fname); const v=t.value.replace(/^#/,'').trim(); if(v && v!==f.name) ST.names[f.id]=v; else delete ST.names[f.id]; }
@@ -1328,6 +1336,11 @@ function parseTickets(quiet){
   return {tickets, errs};
 }
 $('ticketText').addEventListener('change', ()=>parseTickets(true));
+function saveTicketText(){ ST.ticketText=ST.ticketText||{}; const v=$('ticketText').value; if(v.trim()) ST.ticketText[R]=v; else delete ST.ticketText[R]; save(); }
+{ let tm=null; $('ticketText').addEventListener('input', ()=>{ clearTimeout(tm); tm=setTimeout(saveTicketText,500); }); }
+$('btnTicketSave').addEventListener('click', ()=>{ saveTicketText(); parseTickets(false); toast(`${R}회 구매 용지를 이 기기 브라우저에 저장했습니다`); });
+// 브라우저가 저장공간을 임의로 비우지 않도록 요청 (지원하는 브라우저만)
+try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persisted().then(p=>{ if(!p) navigator.storage.persist(); }); }catch(e){}
 $('btnTicketAdd').addEventListener('click', ()=>{
   const {tickets, errs}=parseTickets(false); if(errs.length) return toast('잘못된 줄을 먼저 고쳐 주세요');
   if(!tickets.length) return toast('추가할 게임이 없습니다');
@@ -1636,7 +1649,7 @@ $('fileRestore').addEventListener('change', e=>{ const f=e.target.files[0]; if(!
     catch(err){ toast('불러오기 실패: '+err.message); } }; r.readAsText(f,'utf-8'); });
 
 /* ---------- init ---------- */
-R = latest()+1;
+R = latest()+1; loadTicketText();
 recomputeBT();
 if(ST.conds.some(c=>c.src==='base' && (c.live || !c.fid))){ ST.conds=ST.conds.filter(c=>c.src!=='base'); refreshBase(true); }
 renderAll();
