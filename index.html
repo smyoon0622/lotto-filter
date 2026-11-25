@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.8";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.9";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -1214,20 +1214,26 @@ function renderViewSeg(){ const m=RES?RES.data.length/6:0;
   $('vcRes').textContent = RES?`${m.toLocaleString()}개`:''; $('vcInv').textContent = RES?`${(TOTAL-m).toLocaleString()}개`:'';
   document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on', b.dataset.view===VIEW));
   $('btnAddAll').textContent = VIEW==='inv' ? '반대 후보군 전체를 조건에 추가' : '결과 조합 전체를 조건에 추가'; }
+// 목록이 아주 길면(브라우저 높이 한계 약 3천만 px) 스크롤 길이를 줄이고 위치를 비율로 바꿈
+const VMAXH=12000000;
+function vMap(n){ const h=$('vlist').clientHeight||480, full=n*ROWH;
+  if(full<=VMAXH) return {H:full, h, rowAt:t=>t/ROWH, topFor:i=>i*ROWH};
+  const span=Math.max(1,n-h/ROWH), H=VMAXH;
+  return {H, h, rowAt:t=>Math.min(span, t/(H-h)*span), topFor:i=>Math.min(1,i/span)*(H-h)}; }
 function renderVList(){
   const box=$('vlist'), sp=$('vspacer'); renderViewSeg(); if(!RES){ sp.style.height='0'; sp.innerHTML=''; return; }
-  if(VIEW==='inv' && !(INV&&INV.res===RES) && RES.data.length/6>300000){ sp.style.height='0'; sp.innerHTML='<div class="muted" style="padding:10px">반대 후보군을 계산하는 중…</div>'; setTimeout(()=>{ invPrep(); renderVList(); },30); return; }
-  const n=viewN(), WI=viewWin(); sp.style.height=(n*ROWH)+'px';
+  if(VIEW==='inv' && !(INV&&INV.res===RES) && RES.data.length/6>300000){ sp.style.height='0'; sp.innerHTML='<div class="muted" style="padding:10px">반대 후보군을 계산하는 중…</div>'; setTimeout(()=>{ invPrep(); renderVList(); renderRank(); },30); return; }
+  const n=viewN(), WI=viewWin(), vm=vMap(n); sp.style.height=vm.H+'px';
   if(!n){ sp.innerHTML='<div class="muted" style="padding:10px">남은 조합이 없습니다.</div>'; return; }
-  const top=box.scrollTop, h=box.clientHeight||480; const a=Math.max(0,Math.floor(top/ROWH)-8), b=Math.min(n,Math.ceil((top+h)/ROWH)+8);
+  const top=box.scrollTop, h=vm.h, f=vm.rowAt(top); const a=Math.max(0,Math.floor(f)-8), b=Math.min(n,Math.ceil(f+h/ROWH)+8);
   const full=Math.floor(n/5)*5;
   if(SEL.res!==RES||SEL.view!==VIEW) selReset();
-  let out=''; for(let i=a;i<b;i++){ const g=Math.floor(i/5); out+=`<div class="vrow ${g%2?'godd':''}${i===HL?' hl':''}${isSel(i)?' sel':''}" style="top:${i*ROWH}px"><input type="checkbox" class="vchk" data-vi="${i}" ${isSel(i)?'checked':''}><span class="vg ${i>=full?'x':''}">${i>=full?'그룹 외':'G'+(g+1)+'-'+(i%5+1)}</span><span class="vno">${(i+1).toLocaleString()}</span>
+  let out=''; for(let i=a;i<b;i++){ const g=Math.floor(i/5); out+=`<div class="vrow ${g%2?'godd':''}${i===HL?' hl':''}${isSel(i)?' sel':''}" style="top:${Math.round(top+(i-f)*ROWH)}px"><input type="checkbox" class="vchk" data-vi="${i}" ${isSel(i)?'checked':''}><span class="vg ${i>=full?'x':''}">${i>=full?'그룹 외':'G'+(g+1)+'-'+(i%5+1)}</span><span class="vno">${(i+1).toLocaleString()}</span>
     <span class="balls">${viewCombo(i).map(x=>ballHtml(x)).join('')}</span>${WI===i?'<b style="color:#e8590c;font-size:12px">1등</b>':''}</div>`; }
   sp.innerHTML=out;
 }
 $('vlist').addEventListener('scroll', ()=>requestAnimationFrame(renderVList));
-$('viewSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b||b.dataset.view===VIEW) return; VIEW=b.dataset.view; $('vlist').scrollTop=0; renderVList(); selInfo(); });
+$('viewSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b||b.dataset.view===VIEW) return; VIEW=b.dataset.view; $('vlist').scrollTop=0; renderVList(); renderRank(); selInfo(); });
 /* ---------- 결과 조합 선택 · txt 내보내기 ---------- */
 const SEL={res:null, all:false, x:new Set()};   // all=true면 x는 '선택 해제한' 조합, false면 '선택한' 조합
 function selReset(){ SEL.res=RES; SEL.view=VIEW; SEL.all=false; SEL.x.clear(); selInfo(); }
@@ -1313,12 +1319,30 @@ $('picks').addEventListener('click', e=>{
 
 
 /* ---------- rank summary ---------- */
+// 1등 번호와 겹치는 개수별 전체 조합 수 (0~6개), 5개는 [보너스 포함, 미포함]
+const ALLHIT=(()=>{ const C=(n,k)=>{ let r=1; for(let i=0;i<k;i++) r=r*(n-i)/(i+1); return Math.round(r); }; return [0,1,2,3,4,5,6].map(k=>C(6,k)*C(39,6-k)); })();
+function resHist(){ if(RES.hist) return RES.hist; const w=DR[RES.round], wm=new Uint8Array(47); for(let i=0;i<6;i++) wm[w[i]]=1; const wb=w[6];
+  const h=[0,0,0,0,0,0,0]; let b5=0; const d=RES.data;
+  for(let o=0;o<d.length;o+=6){ const k=wm[d[o]]+wm[d[o+1]]+wm[d[o+2]]+wm[d[o+3]]+wm[d[o+4]]+wm[d[o+5]]; h[k]++;
+    if(k===5&&(d[o]===wb||d[o+1]===wb||d[o+2]===wb||d[o+3]===wb||d[o+4]===wb||d[o+5]===wb)) b5++; }
+  return RES.hist={h,b5}; }
 function renderRank(){
   const box=$('rankBox'); WINIDX=-1; if(!RES){ box.innerHTML=''; return; }
   const RR=RES.round, w=DR[RR];
   if(!w){ box.innerHTML=`· ${RR}회 미추첨`; return; }
-  const inn=RES.watchIdx||0, r=RES.ranks||[0,0,0,0,0]; WINIDX=inn?inn-1:-1;
-  box.innerHTML=`· ${RR}회 1등 번호 ${inn?`<b style="color:#12a150">포함 (${inn.toLocaleString()}번째)</b> <button class="btn-link" data-goto="${inn}">위치로 이동</button>`:'<b>제외됨</b>'} <button class="btn-link" data-diagwin>왜?</button> · `+['1등','2등','3등','4등','5등'].map((l,i)=>`${l} ${r[i]?`<b>${r[i].toLocaleString()}</b>`:'0'}`).join(' · ');
+  const inn=RES.watchIdx||0; WINIDX=inn?inn-1:-1;
+  const {h,b5}=resHist(); let r, pos, maxTxt='';
+  if(VIEW==='inv' && RES.data.length/6>=TOTAL){ box.innerHTML=`· ${RR}회 반대 후보군 없음 (결과가 전체 조합)`; return; }
+  if(VIEW==='inv'){
+    const ih=h.map((c,k)=>ALLHIT[k]-c), ib5=6-b5;
+    r=[ih[6], ib5, ih[5]-ib5, ih[4], ih[3]];
+    if(!inn && !(INV&&INV.res===RES)){ box.innerHTML=`· ${RR}회 반대 후보군 계산 중…`; return; }
+    pos = inn ? 0 : (invPrep().win+1);
+    let mx=6; while(mx>0 && !ih[mx]) mx--;
+    maxTxt=` · 조합별 1등 숫자 최대 <b style="color:#e8590c">${mx}개</b>`;
+  } else { r=RES.ranks||[0,0,0,0,0]; pos=inn; }
+  const label = VIEW==='inv' ? '반대 후보군' : '결과 조합';
+  box.innerHTML=`· ${RR}회 1등 번호 ${label}에 ${pos?`<b style="color:#12a150">포함 (${pos.toLocaleString()}번째)</b> <button class="btn-link" data-goto="${pos}">위치로 이동</button>`:'<b>없음</b>'}${VIEW==='res'?' <button class="btn-link" data-diagwin>왜?</button>':''}${maxTxt} · `+['1등','2등','3등','4등','5등'].map((l,i)=>`${l} ${r[i]?`<b>${r[i].toLocaleString()}</b>`:'0'}`).join(' · ');
 }
 
 function renderRoundInfo(){
@@ -1559,7 +1583,7 @@ $('diagOut').insertAdjacentHTML('beforebegin','');
 function diagRound(){ return RES ? RES.round : R; }
 function autoDiag(){ const RR=diagRound(), w=DR[RR]; if(w && ($('diagBox').open || $('diagOut').innerHTML)){ $('diagIn').value=w.slice(0,6).join(' '); runDiag(); } else { $('diagOut').innerHTML=''; $('diagSum').textContent=''; } }
 $('btnDiagWin').addEventListener('click', ()=>{ const RR=diagRound(), w=DR[RR]; if(!w) return toast(`${RR}회는 아직 추첨 전입니다`); $('diagIn').value=w.slice(0,6).join(' '); $('diagBox').open=true; runDiag(); });
-$('rankBox').addEventListener('click', e=>{ if(e.target.dataset.goto){ if(VIEW!=='res'){ VIEW='res'; } const i=+e.target.dataset.goto-1; $('vlist').scrollTop=Math.max(0,i*ROWH-ROWH*3); renderVList(); HL=i; setTimeout(()=>{HL=-1; renderVList();},2500); return; } if(e.target.dataset.diagwin!==undefined){ $('btnDiagWin').click(); $('diagBox').scrollIntoView({behavior:'smooth',block:'center'}); } });
+$('rankBox').addEventListener('click', e=>{ if(e.target.dataset.goto){ const i=+e.target.dataset.goto-1; $('vlist').scrollTop=Math.max(0,vMap(viewN()).topFor(Math.max(0,i-3))); renderVList(); HL=i; setTimeout(()=>{HL=-1; renderVList();},2500); return; } if(e.target.dataset.diagwin!==undefined){ $('btnDiagWin').click(); $('diagBox').scrollIntoView({behavior:'smooth',block:'center'}); } });
 
 
 /* ---------- reduction recommendation ---------- */
