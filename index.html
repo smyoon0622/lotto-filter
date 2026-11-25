@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.6";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.7";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -89,6 +89,7 @@ tr:hover .pin,.pin:focus{opacity:.7}
 .notepop textarea{width:100%;box-sizing:border-box;min-height:70px;border:1px solid #e6cf5a;background:#fffdf0;font:inherit;font-size:12.5px;resize:vertical}
 .notepop .nbtn{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
 .selbar{gap:6px;flex-wrap:wrap}
+.addcond{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;margin:0 0 10px;background:#f8f9fa;border:1px dashed var(--line);border-radius:8px;font-size:13px}
 .vrow .vchk{margin:0 2px 0 0;width:16px;height:16px;flex:none}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:6px;font-weight:400}
 .seg button{border:0;border-radius:0;background:#fff;padding:3px 10px;font-size:12.5px;color:var(--sub)}
@@ -245,7 +246,7 @@ tr:hover .pin,.pin:focus{opacity:.7}
 .updbar .x{background:none;border:0;color:#b8c2d6;font-weight:400}
 .ctable-wrap{overflow-x:auto;max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 .ctable{border-collapse:collapse;width:100%;font-size:12.5px}
-.ctable th{position:sticky;top:0;background:#f3f5f8;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:500;color:var(--sub)}
+.ctable th{position:sticky;top:0;z-index:5;background:#f3f5f8;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:500;color:var(--sub)}
 .ctable td{padding:4px 8px;border-bottom:1px solid #eef0f3;vertical-align:middle}
 .ctable tr.off td{opacity:.45}
 .ctable input[type=number]{width:44px;padding:3px 5px}
@@ -403,6 +404,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
     <button id="btnUseBase">현재 베이스 조건 가져오기</button>
     <span style="flex:1"></span>
     <button id="btnCondClear">목록 비우기</button>
+  </div>
+  <div class="addcond">
+    <b>새 조건 추가</b>
+    <label class="kv">이름 <input type="text" id="ncName" placeholder="예: 내 조건" style="width:120px"></label>
+    <label class="kv">출현범위 <input type="number" id="ncMin" value="1" min="0" max="6" style="width:44px">-<input type="number" id="ncMax" value="3" min="0" max="6" style="width:44px"></label>
+    <label class="kv" style="flex:1;min-width:220px">후보숫자 <input type="text" id="ncNums" placeholder="예: 3 7 12 21 33 (공백·쉼표 구분)" style="flex:1"></label>
+    <button class="primary small" id="btnNcAdd">조건 추가</button>
   </div>
   <div id="condErr" class="err"></div>
   <div class="row muted" style="margin-bottom:6px;gap:14px">
@@ -729,7 +737,7 @@ function renderSticky(){
   const s=$('stickySel'); s.value=String(R); s.onchange=()=>{ setRound(+s.value); };
 }
 function loadTicketText(){ $('ticketText').value=(ST.ticketText&&ST.ticketText[R])||''; $('ticketSum').textContent=''; $('ticketMsg').textContent=''; if($('ticketText').value) parseTickets(true); }
-function dropResultConds(){ const before=ST.conds.length; ST.conds=ST.conds.filter(c=>c.src==='base'); loadTicketText(); if(ST.conds.length!==before){ save(); toast('회차가 바뀌어 베이스 조건 외의 조건을 모두 지웠습니다'); } renderTicketState(); }
+function dropResultConds(){ const before=ST.conds.length; ST.conds=ST.conds.filter(c=>c.src==='base'||c.src==='manual'); loadTicketText(); if(ST.conds.length!==before){ save(); toast('회차가 바뀌어 결과 조합·구매 용지 조건을 지웠습니다 (베이스·직접 추가 조건은 그대로)'); } renderTicketState(); }
 function setRound(r){ if(r===R) return; R=r; dropResultConds(); renderAll(); if(RES) renderRank(); renderRoundInfo(); renderConds(); }
 function renderAll(){ renderTop(); renderCards(); renderFS(); renderSticky(); if(typeof renderSlip==='function' && $('slip')) renderSlip(); }
 
@@ -982,7 +990,7 @@ function renderConds(){
     <td class="nowrap">${rng}</td>
     <td>${bd?`<button class="btn-link" data-open="${c.id}">${open?'▾':'▸'} 세부 조건 ${n.toLocaleString()}개 ${open?'닫기':'보기'}</button> <span class="muted">${c.desc||''}</span>`:`<input type="text" data-k="nums" value="${c.nums.join(',')}" class="numsin">`}</td>
     <td class="cnt">${c.loading?'불러오는 중':bd?n.toLocaleString()+'개':c.nums.length}</td>
-    <td><b>${c.name}</b>${noteHtml(c)}${c.src==='base'&&c.nodata?' <span class="muted">(데이터 없음)</span>':''}</td>
+    <td>${c.src==='manual'?`<input type="text" data-k="name" value="${escH(c.name)}" style="width:110px;font-weight:700">`:`<b>${c.name}</b>`}${noteHtml(c)}${c.src==='base'&&c.nodata?' <span class="muted">(데이터 없음)</span>':''}</td>
     <td><span class="tag ${c.src==='base'?'auto':'man'}">${SRC_LBL[c.src]||c.src}${c.src==='base'?' '+c.round+'회':''}</span></td>
     <td><button class="small" data-del="${i}">삭제</button></td></tr>`;
     if(bd && open){ const it = c.combos ? (()=>{ const a=[], m=Math.min(c.combos.length/6,300); for(let j=0;j<m;j++) a.push({min:c.min,max:c.max,nums:Array.from(c.combos.subarray(j*6,j*6+6)),name:c.name+(j+1)}); a.length0=c.combos.length/6; return a; })() : bundleItems(c), lim=Math.min(it.length,300);
@@ -1023,6 +1031,16 @@ $('condBody').addEventListener('click', e=>{ const d=e.target.dataset;
 document.addEventListener('click', e=>{ if(!e.target.closest('.pinw')) document.querySelectorAll('.pinw.show').forEach(x=>x.classList.remove('show')); });
 $('condBody').addEventListener('click', e=>{ const o=e.target.dataset.open; if(o!==undefined){ const id=+o; if(OPEN.has(id)) OPEN.delete(id); else OPEN.add(id); renderConds(); } });
 $('condBody').addEventListener('click', e=>{ const d=e.target.dataset.del; if(d===undefined) return; const c=ST.conds[+d]; if(c&&c.src==='base'){ ST.enabled[c.fid]=false; save(); renderCards(); renderConds(); toast(`#${c.name}: 베이스 조건은 지우는 대신 꺼 둡니다 (체크하면 다시 사용)`); return; } ST.conds.splice(+d,1); save(); renderConds(); });
+$('btnNcAdd').addEventListener('click', ()=>{
+  const nums=uniqSort(parseNums($('ncNums').value)).filter(n=>n>=1&&n<=45);
+  let a=Math.max(0,Math.min(6,+$('ncMin').value||0)), b=Math.max(0,Math.min(6,+$('ncMax').value||0)); if(a>b) [a,b]=[b,a];
+  if(!nums.length) return toast('후보숫자를 1개 이상 넣어 주세요 (1~45)');
+  const n=ST.conds.filter(c=>c.src==='manual').length+1, name=$('ncName').value.trim()||('직접조건'+n);
+  ST.conds.push({id:++condSeq, on:true, src:'manual', min:a, max:b, nums, name}); save(); renderConds();
+  $('ncName').value=''; $('ncNums').value='';
+  toast(`#${name} 조건을 추가했습니다 (${a}-${b}, 숫자 ${nums.length}개)`);
+});
+$('ncNums').addEventListener('keydown', e=>{ if(e.key==='Enter') $('btnNcAdd').click(); });
 $('btnUseBase').addEventListener('click', ()=>{
   const warn=refreshBase(true); renderConds(); $('condErr').textContent=warn.join('\n');
   toast(`${R}회 기준 베이스 조건을 현재 상태로 가져왔습니다`); });
