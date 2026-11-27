@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.12";window.APP_BUILT="2026.11.27 16:37";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.13";window.APP_BUILT="2026.11.27 16:47";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -180,6 +180,7 @@ tr:hover .pin,.pin:focus{opacity:.7}
 .stickybar .ball{width:26px;height:26px;font-size:12px}
 .stickybar .pend{background:#3b4a6b;border-radius:6px;padding:2px 10px;font-weight:700}
 .stickybar .sub{color:#b8c2d6;font-size:12.5px}
+.relaxbox{border:1px solid #d6dbe4;background:#f8f9fb;border-radius:10px;padding:10px 12px;margin:0 0 10px}.relaxt{border-collapse:collapse}.relaxt th{font-size:12px;color:#667;text-align:left;padding:2px 8px 4px 0}.relaxt td{padding:3px 8px 3px 0}.relaxt select{min-width:150px}.relaxt input[type=number]{width:44px}
 .stickybar .verinfo{margin-left:auto;color:#b8c2d6;font-size:12px;white-space:nowrap}.stickybar .verinfo b{color:#fff}.stickybar .verinfo+.memo-btn{margin-left:0}
 @media (max-width:640px){.stickybar .verinfo{font-size:11px;white-space:normal}}
 .cost{font-size:13px;color:var(--ink);margin-left:10px;font-weight:500}
@@ -422,7 +423,12 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
       <span class="kv">출현범위 <input type="number" id="bulkMin" value="0" min="0" max="6" style="width:44px">-<input type="number" id="bulkMax" value="3" min="0" max="6" style="width:44px"></span>
       <span class="kv"><button class="small" id="btnBulk">적용</button><button class="small" id="btnBulkReset">초기화</button></span>
       <span class="kv"><button class="small" id="btnBulkOn">모두 사용</button><button class="small" id="btnBulkOff">모두 해제</button></span>
-      <span class="kv"><button class="small" id="btnRelax" title="전체숫자 0-4 · 두칸띄기 0-3 · 109회기 0-3 · 출현중복 0-3 · 이웃수1·2 0-3 · 대각 0-3 (목록에 있는 조건만)">조건완화</button></span></span>
+      <span class="kv"><button class="small" id="btnRelax">조건완화</button><button class="small" id="btnRelaxSet" title="조건완화 설정">⚙ 설정</button></span></span>
+  </div>
+  <div id="relaxBox" class="relaxbox" style="display:none">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><b>조건완화 설정</b><span class="muted">[조건완화]를 누르면 목록에 있는 아래 조건만 이 출현범위로 바뀝니다</span></div>
+    <table class="relaxt"><thead><tr><th>조건명</th><th>출현범위</th><th></th></tr></thead><tbody id="relaxRows"></tbody></table>
+    <div class="row" style="margin-top:8px;gap:6px"><button class="small" id="btnRelaxAdd">+ 조건 추가</button><button class="small primary" id="btnRelaxSave">저장</button><button class="small" id="btnRelaxDef">기본값으로</button><button class="small" id="btnRelaxClose">닫기</button></div>
   </div>
   <div class="ctable-wrap"><table class="ctable"><thead><tr><th>사용</th><th>출현범위</th><th>후보수</th><th>개수</th><th>필터명</th><th>출처</th><th></th></tr></thead><tbody id="condBody"></tbody></table></div>
   <div class="row" style="margin-top:12px"><button class="primary big" id="btnRun">조합 필터링 실행</button><span class="fsstate" id="fsState"></span><span class="muted" id="runNote"></span></div>
@@ -1062,16 +1068,42 @@ $('btnCondClear').addEventListener('click', ()=>{ ST.conds=[]; save(); renderCon
 function bulkTargets(){ const s=$('bulkScope').value; return ST.conds.filter(c=>(s==='all'||c.src===s)); }
 $('btnBulk').addEventListener('click', ()=>{ const a=Math.max(0,Math.min(6,+$('bulkMin').value||0)), b=Math.max(0,Math.min(6,+$('bulkMax').value||0)); const t=bulkTargets(); t.forEach(c=>{ if(c.src==='base'){ ST.ranges[c.fid]=[a,b]; return; } c.min=a;c.max=b; if(c.items) c.items.forEach(x=>{x.min=a;x.max=b;});}); if(t.some(c=>c.src==='base')){ recomputeBT(); renderCards(); } save(); renderConds(); toast(`${t.length}개 조건을 ${a}-${b}로 변경`); });
 $('btnBulkReset').addEventListener('click', resetRanges);
-// 조건완화: 지금 목록에 있는 해당 조건만 정해진 출현범위로
-const RELAX={all:[0,4], yesang:[0,3], h109:[0,3], dup:[0,3], nb1:[0,3], nb2:[0,3], diag:[0,3]};
+// 조건완화: 저장된 설정(조건명·출현범위)대로, 지금 목록에 있는 해당 조건만 변경
+const RELAX_DEF=[['f:all',0,4],['f:yesang',0,3],['f:h109',0,3],['f:dup',0,3],['f:nb1',0,3],['f:nb2',0,3],['f:diag',0,3]].map(([key,min,max])=>({key,min,max}));
+ST.relax = ST.relax || RELAX_DEF.map(x=>({...x}));
+const relaxLabel = key => { if(key.startsWith('f:')){ const f=F.find(x=>x.id===key.slice(2)); return f?nameOf(f):key.slice(2); } return key.slice(2); };
+const relaxMatch = (c,key) => { if(key.startsWith('f:')){ const id=key.slice(2); if(c.fid===id) return true; const f=F.find(x=>x.id===id); return !c.fid && f && c.name===nameOf(f); } return c.name===key.slice(2); };
+function relaxSummary(){ return (ST.relax||[]).map(r=>`${relaxLabel(r.key)} ${r.min}-${r.max}`).join(' · ') || '설정 없음'; }
+function renderRelaxBtn(){ const b=$('btnRelax'); if(b) b.title='조건완화: '+relaxSummary()+' (목록에 있는 조건만)'; }
 $('btnRelax').addEventListener('click', ()=>{
-  const byName={}; F.forEach(f=>{ if(RELAX[f.id]) byName[nameOf(f)]=RELAX[f.id]; });
   const done=[]; let baseHit=false;
-  ST.conds.forEach(c=>{ const r = c.src==='base' ? RELAX[c.fid] : byName[c.name]; if(!r) return;
-    if(c.src==='base'){ ST.ranges[c.fid]=[r[0],r[1]]; baseHit=true; } else { c.min=r[0]; c.max=r[1]; if(c.items) c.items.forEach(x=>{x.min=r[0];x.max=r[1];}); }
-    c.min=r[0]; c.max=r[1]; done.push(`${c.name} ${r[0]}-${r[1]}`); });
-  if(!done.length) return toast('목록에 완화할 조건(전체숫자·두칸띄기·109회기·출현중복·이웃수1·2·대각)이 없습니다');
+  (ST.relax||[]).forEach(r=>{ ST.conds.forEach(c=>{ if(!relaxMatch(c,r.key)) return;
+    if(c.src==='base'){ ST.ranges[c.fid]=[r.min,r.max]; baseHit=true; } else if(c.items) c.items.forEach(x=>{x.min=r.min;x.max=r.max;});
+    c.min=r.min; c.max=r.max; done.push(`${c.name} ${r.min}-${r.max}`); }); });
+  if(!done.length) return toast('목록에 완화할 조건이 없습니다 ('+relaxSummary()+')');
   if(baseHit){ recomputeBT(); renderCards(); } save(); renderConds(); toast('조건완화: '+done.join(' · ')); });
+let RELAX_EDIT=null;
+function relaxOptions(sel){ const opts=[]; const seen=new Set();
+  F.forEach(f=>{ opts.push([`f:${f.id}`, nameOf(f)]); seen.add(nameOf(f)); });
+  ST.conds.forEach(c=>{ if(!c.fid && c.name && !seen.has(c.name)){ seen.add(c.name); opts.push([`n:${c.name}`, c.name+' (직접/결과 조건)']); } });
+  if(sel && !opts.some(o=>o[0]===sel)) opts.push([sel, relaxLabel(sel)]);
+  return opts.map(([v,l])=>`<option value="${escH(v)}"${v===sel?' selected':''}>${escH(l)}</option>`).join(''); }
+function renderRelaxRows(){ $('relaxRows').innerHTML = RELAX_EDIT.map((r,i)=>`<tr><td><select data-ri="${i}" data-rk="key">${relaxOptions(r.key)}</select></td>
+  <td><input type="number" min="0" max="6" data-ri="${i}" data-rk="min" value="${r.min}">-<input type="number" min="0" max="6" data-ri="${i}" data-rk="max" value="${r.max}"></td>
+  <td><button class="small" data-rdel="${i}">삭제</button></td></tr>`).join('') || '<tr><td colspan="3" class="muted">조건이 없습니다. [+ 조건 추가]를 누르세요.</td></tr>'; }
+function relaxOpen(on){ const b=$('relaxBox'); if(on){ RELAX_EDIT=(ST.relax||[]).map(x=>({...x})); renderRelaxRows(); } b.style.display=on?'block':'none'; }
+$('btnRelaxSet').addEventListener('click', ()=>relaxOpen($('relaxBox').style.display==='none'));
+$('btnRelaxClose').addEventListener('click', ()=>relaxOpen(false));
+$('btnRelaxAdd').addEventListener('click', ()=>{ RELAX_EDIT.push({key:'f:'+F[0].id, min:0, max:3}); renderRelaxRows(); });
+$('btnRelaxDef').addEventListener('click', ()=>{ RELAX_EDIT=RELAX_DEF.map(x=>({...x})); renderRelaxRows(); toast('기본값을 불러왔습니다. [저장]을 눌러야 적용됩니다'); });
+$('relaxRows').addEventListener('change', e=>{ const i=e.target.dataset.ri, k=e.target.dataset.rk; if(i===undefined) return; const r=RELAX_EDIT[+i];
+  if(k==='key') r.key=e.target.value; else r[k]=Math.max(0,Math.min(6,+e.target.value||0)); });
+$('relaxRows').addEventListener('click', e=>{ const d=e.target.dataset.rdel; if(d===undefined) return; RELAX_EDIT.splice(+d,1); renderRelaxRows(); });
+$('btnRelaxSave').addEventListener('click', ()=>{ $('relaxRows').querySelectorAll('[data-ri]').forEach(el=>{ const r=RELAX_EDIT[+el.dataset.ri], k=el.dataset.rk; if(k==='key') r.key=el.value; else r[k]=Math.max(0,Math.min(6,+el.value||0)); });
+  const bad=RELAX_EDIT.find(r=>r.min>r.max); if(bad) return toast(`${relaxLabel(bad.key)}: 출현범위 앞 숫자가 뒤 숫자보다 큽니다`);
+  const m=new Map(); RELAX_EDIT.forEach(r=>m.set(r.key,r)); ST.relax=[...m.values()].map(x=>({...x})); save(); renderRelaxBtn(); RELAX_EDIT=ST.relax.map(x=>({...x})); renderRelaxRows();
+  toast('조건완화 설정을 저장했습니다: '+relaxSummary()); });
+renderRelaxBtn();
 $('btnBulkOn').addEventListener('click', ()=>{ bulkTargets().forEach(c=>{ c.on=true; if(c.fid) ST.enabled[c.fid]=true; }); save(); renderCards(); renderConds(); });
 $('btnBulkOff').addEventListener('click', ()=>{ bulkTargets().forEach(c=>{ c.on=false; if(c.fid) ST.enabled[c.fid]=false; }); save(); renderCards(); renderConds(); });
 
