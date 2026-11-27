@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.11";window.APP_BUILT="2026.11.27 15:41";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.12";window.APP_BUILT="2026.11.27 16:37";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -523,7 +523,9 @@ const with7 = r => DR[r] ? DR[r].slice(0,7) : null;
 const wrap = x => { while (x > 45) x -= 45; while (x < 1) x += 45; return x; };
 const uniqSort = a => [...new Set(a)].filter(n => n>=1 && n<=45).sort((x,y)=>x-y);
 function eokFor(R){ const v = (R in ST.eok) ? ST.eok[R] : SEED.eok[R]; return v && v.length ? v : null; }
-function mockFor(R){ const v = (R in ST.mock) ? ST.mock[R] : SEED.mock[R]; return v && v.length ? v : null; }
+function mockFor(R){ const u=ST.mock[R]; if(u && u.length) return u; const v=SEED.mock[R]; return v && v.length ? v : null; }
+// 필출 계산용 지난 모의번호: 바로 전 회차가 없으면 그 전에 있는 가장 최근 회차
+function mockPrev(R){ for(let k=R-1;k>=R-60&&k>0;k--){ const a=mockFor(k); if(a) return {r:k, a, fb:k!==R-1}; } return null; }
 function drawDate(R){ const d = new Date(Date.UTC(2002,11,7)); d.setUTCDate(d.getUTCDate() + 7*(R-1)); return d; }
 function ymd(d){ return d.getUTCFullYear() + String(d.getUTCMonth()+1).padStart(2,'0') + String(d.getUTCDate()).padStart(2,'0'); }
 function digitsFor(R){ return (ST.params.digits[R] || (ymd(drawDate(R)) + String(R))); }
@@ -616,17 +618,21 @@ def({id:'nb2', name:'이웃수2', src:'이웃수검증 X~AI', range:[1,2], kind:
 def({id:'nball', name:'이웃수전체', src:'이웃수1 + 이웃수2', range:[1,4], kind:'auto', desc:'이웃수1과 이웃수2를 합친 숫자.',
   compute(R){ const p=main6(R-1), q=main6(R-2); if(!p||!q) return {set:null}; return {set:uniqSort(nb1(p).concat(nb1(q))), html:''}; }});
 
-function mockInputs(R){ const a=mockFor(R), b=mockFor(R-1);
+function mockInputs(R){ const a=mockFor(R), b=mockFor(R-1), pv=mockPrev(R);
   return `<div class="inbox">${R}회 모의번호 7개<input type="text" data-mock="${R}" value="${a?a.join(' '):''}">
-    ${R-1}회 모의번호 7개 (필출 계산용)<input type="text" data-mock="${R-1}" value="${b?b.join(' '):''}"><div class="savebar"><button class="small primary" data-savecard="1">저장</button><span class="muted">입력하면 이 기기에 자동 저장 · 버튼으로 바로 저장</span></div></div>`; }
+    ${R-1}회 모의번호 7개 (필출 계산용 · 비우면 자동)<input type="text" data-mock="${R-1}" value="${b?b.join(' '):''}" placeholder="${pv?`비어 있으면 ${pv.r}회 모의번호 ${pv.a.join(' ')} 사용`:'지난 회차 모의번호 7개'}"><div class="savebar"><button class="small primary" data-savecard="1">저장</button><span class="muted">입력하면 이 기기에 자동 저장 · 버튼으로 바로 저장</span></div></div>`; }
 def({id:'mock', name:'모의번호', src:'모의번호 K~Q', range:[0,3], kind:'manual', desc:'해당 회차 모의번호 7개. 직접 입력합니다.',
   compute(R){ const a=mockFor(R); return {set:a?uniqSort(a):null, html:mockInputs(R)}; }});
 def({id:'mockp', name:'모의번호필출', src:'모의번호 BH~CR', range:[1,4], kind:'manual',
   desc:'이번 모의번호 ±1, 지난 모의번호 ±1, 이번 모의번호 7개를 모두 모았을 때 한 번만 나온 숫자.',
-  compute(R){ const a=mockFor(R), b=mockFor(R-1); if(!a||!b) return {set:null, html:'모의번호 카드에 이번·지난 회차 모의번호를 입력하세요.'};
-    const all=nb1(a).concat(nb1(b), a); const c={}; all.forEach(n=>c[n]=(c[n]||0)+1);
+  compute(R){ const a=mockFor(R), pv=mockPrev(R);
+    if(!a) return {set:null, html:`모의번호 카드에 ${R}회 모의번호 7개를 입력하면 자동으로 계산됩니다.`};
+    if(!pv) return {set:null, html:'지난 회차 모의번호가 없습니다. 모의번호 카드의 필출 계산용 칸에 입력하세요.'};
+    const b=pv.a, na=nb1(a), nb=nb1(b);
+    const all=na.concat(nb, a); const c={}; all.forEach(n=>c[n]=(c[n]||0)+1);
     const dup=Object.keys(c).filter(n=>c[n]>1).map(Number).sort((x,y)=>x-y);
-    return {set:uniqSort(Object.keys(c).map(Number).filter(n=>c[n]===1)), html:`중복되어 빠진 숫자: ${dup.join(', ')||'없음'}`}; }});
+    return {set:uniqSort(Object.keys(c).map(Number).filter(n=>c[n]===1)),
+      html:`<b>필출 계산용</b><br>${R}회 모의 ±1: ${na.join(' ')}<br>${pv.r}회 모의 ±1: ${nb.join(' ')}${pv.fb?` <span style="color:#e8590c">(${R-1}회 모의번호가 없어 ${pv.r}회 사용)</span>`:''}<br>${R}회 모의: ${a.join(' ')}<br>중복되어 빠진 숫자: ${dup.join(', ')||'없음'}`}; }});
 
 def({id:'pat', name:'패턴', src:'패턴 U~AA (7열 배치)', range:[1,3], kind:'auto',
   desc:'7열 용지에서 전회차 당첨번호 각각의 주변 3×3 칸을 지우고 남은 숫자.',
