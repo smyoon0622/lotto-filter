@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.15";window.APP_BUILT="2026.11.27 19:50";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.16";window.APP_BUILT="2026.11.27 20:36";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -1649,7 +1649,8 @@ function recommend(){
   const d=RES.data, n=d.length/6, RR=RES.round, w=DR[RR];
   // (a) numbers: how many result combos contain each number
   const cnt=new Uint32Array(46); for(let i=0;i<d.length;i++) cnt[d[i]]++;
-  const nums=[...Array(45)].map((_,i)=>({n:i+1, c:cnt[i+1]})).sort((a,b)=>b.c-a.c);
+  const W6=w?w.slice(0,6):null; // 추첨된 회차면 1등 번호를 빼는 추천은 하지 않음
+  const nums=[...Array(45)].map((_,i)=>({n:i+1, c:cnt[i+1]})).filter(x=>!W6||!W6.includes(x.n)).sort((a,b)=>b.c-a.c);
   // recent appearance of a number (last 100 draws) as a risk hint
   const recent=x=>{ let k=0; for(let r=RR-100;r<RR;r++) if(DR[r]&&DR[r].slice(0,6).includes(x)) k++; return k; };
   // (b) conditions: narrowing a range by one step at either end
@@ -1659,15 +1660,17 @@ function recommend(){
     for(let i=0;i<n;i++){ let k=0; for(let j=0;j<6;j++) k+=m[d[i*6+j]]; h[k]++; }
     const f=c.fid?F.find(x=>x.id===c.fid):null;
     const bt=(a,b)=>{ if(!f) return null; let N=0, ok=0; for(let r=RR-100;r<RR;r++){ let res; try{res=f.compute(r);}catch(e){continue;} if(!res.set||!DR[r]) continue; const s=finalSet(f,r,res); const k=DR[r].slice(0,6).filter(x=>s.includes(x)).length; N++; if(k>=a&&k<=b) ok++; } return N?Math.round(ok*100/N):null; };
-    if(c.max>c.min){ opts.push({c, nmin:c.min, nmax:c.max-1, cut:h[c.max], bt:()=>bt(c.min,c.max-1)}); opts.push({c, nmin:c.min+1, nmax:c.max, cut:h[c.min], bt:()=>bt(c.min+1,c.max)}); }
+    const wk=W6?W6.filter(x=>m[x]).length:null, keep=(a,b)=>wk===null||(wk>=a&&wk<=b);
+    if(c.max>c.min){ if(keep(c.min,c.max-1)) opts.push({c, nmin:c.min, nmax:c.max-1, cut:h[c.max], wk, bt:()=>bt(c.min,c.max-1)}); if(keep(c.min+1,c.max)) opts.push({c, nmin:c.min+1, nmax:c.max, cut:h[c.min], wk, bt:()=>bt(c.min+1,c.max)}); }
   });
-  opts.sort((a,b)=>b.cut-a.cut); const top=opts.slice(0,5); top.forEach(o=>o.rate=o.bt());
+  opts.sort((a,b)=>b.cut-a.cut); const top=opts.filter(o=>o.cut>0).slice(0,5); top.forEach(o=>o.rate=o.bt());
   const pct=x=>(x/n*100).toFixed(1)+'%';
-  const winHit=x=>w? (w.slice(0,6).includes(x)?' <b style="color:#e8590c">(이 회차 당첨번호!)</b>':''):'';
-  let h=`<div class="reco"><h4>① 숫자 하나를 빼면 — 가장 많이 줄어드는 숫자</h4><table><tr><th>숫자</th><th>줄어드는 조합</th><th>최근 100회 출현</th><th></th></tr>`+
+  const winHit=x=>'';
+  const note = W6 ? `<div class="muted" style="font-size:12px;margin-bottom:6px">${RR}회 1등 번호(${W6.join(', ')})가 빠지는 추천은 뺐습니다 — 1등 번호 숫자는 제외 추천에서 빼고, 조건은 1등이 그대로 통과하는 범위로만 좁힙니다.</div>` : `<div class="muted" style="font-size:12px;margin-bottom:6px">${RR}회는 아직 추첨 전이라 1등 번호 기준으로 걸러낼 수 없습니다.</div>`;
+  let h=`<div class="reco">${note}<h4>① 숫자 하나를 빼면 — 가장 많이 줄어드는 숫자</h4><table><tr><th>숫자</th><th>줄어드는 조합</th><th>최근 100회 출현</th><th></th></tr>`+
     nums.slice(0,5).map((x,i)=>`<tr class="${i?'':'best'}"><td>${ballHtml(x.n)}${winHit(x.n)}</td><td><b>${x.c.toLocaleString()}</b>개 (${pct(x.c)})</td><td>${recent(x.n)}회</td><td><button class="small" data-exnum="${x.n}">이 숫자 제외</button></td></tr>`).join('')+`</table>`;
   h+=`<h4>② 조건 범위를 한 칸 좁히면 — 가장 많이 줄어드는 조건</h4><table><tr><th>조건</th><th>지금 → 바꾸면</th><th>줄어드는 조합</th><th>최근 100회 범위 적중</th><th></th></tr>`+
-    (top.length?top.map((o,i)=>`<tr class="${i?'':'best'}"><td>${o.c.name}</td><td>${o.c.min}-${o.c.max} → <b>${o.nmin}-${o.nmax}</b></td><td><b>${o.cut.toLocaleString()}</b>개 (${pct(o.cut)})</td><td>${o.rate==null?'-':o.rate+'%'}</td><td><button class="small" data-narrow="${o.c.id}" data-a="${o.nmin}" data-b="${o.nmax}">이렇게 바꾸기</button></td></tr>`).join(''):'<tr><td colspan="5" class="muted">좁힐 수 있는 조건이 없습니다</td></tr>')+`</table>`;
+    (top.length?top.map((o,i)=>`<tr class="${i?'':'best'}"><td>${o.c.name}${o.wk!==null?`<div class="muted" style="font-size:11.5px">1등 ${o.wk}개 포함 → 통과</div>`:''}</td><td>${o.c.min}-${o.c.max} → <b>${o.nmin}-${o.nmax}</b></td><td><b>${o.cut.toLocaleString()}</b>개 (${pct(o.cut)})</td><td>${o.rate==null?'-':o.rate+'%'}</td><td><button class="small" data-narrow="${o.c.id}" data-a="${o.nmin}" data-b="${o.nmax}">이렇게 바꾸기</button></td></tr>`).join(''):`<tr><td colspan="5" class="muted">${W6?'1등이 빠지지 않게 한 칸 좁힐 수 있는 조건이 없습니다':'좁힐 수 있는 조건이 없습니다'}</td></tr>`)+`</table>`;
   const b1=nums[0], b2=top[0];
   h+=`<div><b>추천</b> 1) 숫자 <b>${b1.n}</b> 제외 → ${b1.c.toLocaleString()}개 감소`+(b2?` · 2) <b>${b2.c.name}</b> ${b2.c.min}-${b2.c.max} → ${b2.nmin}-${b2.nmax} → ${b2.cut.toLocaleString()}개 감소`:'')+
     `<div class="muted" style="font-size:12px;margin-top:4px">각 수치는 ${RR}회 결과 ${n.toLocaleString()}개 기준이며, 둘을 함께 적용하면 겹치는 부분이 있어 합계보다 적게 줄 수 있습니다. 적용 후 다시 실행하세요.</div></div></div>`;
