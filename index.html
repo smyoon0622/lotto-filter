@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>window.STANDALONE=true;window.APP_VERSION="1.0.9";</script>
+<script>window.STANDALONE=true;window.APP_VERSION="1.0.10";</script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -419,7 +419,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px}
     <span class="kv bulkbar"><span class="kv">일괄 변경 <select id="bulkScope"><option value="all">전체</option><option value="base">베이스</option><option value="combo">결과 조합</option><option value="ticket">구매 용지</option><option value="group">5게임 그룹</option></select></span>
       <span class="kv">출현범위 <input type="number" id="bulkMin" value="0" min="0" max="6" style="width:44px">-<input type="number" id="bulkMax" value="3" min="0" max="6" style="width:44px"></span>
       <span class="kv"><button class="small" id="btnBulk">적용</button><button class="small" id="btnBulkReset">초기화</button></span>
-      <span class="kv"><button class="small" id="btnBulkOn">모두 사용</button><button class="small" id="btnBulkOff">모두 해제</button></span></span>
+      <span class="kv"><button class="small" id="btnBulkOn">모두 사용</button><button class="small" id="btnBulkOff">모두 해제</button></span>
+      <span class="kv"><button class="small" id="btnRelax" title="전체숫자 0-4 · 두칸띄기 0-3 · 109회기 0-3 · 출현중복 0-3 · 이웃수1·2 0-3 · 대각 0-3 (목록에 있는 조건만)">조건완화</button></span></span>
   </div>
   <div class="ctable-wrap"><table class="ctable"><thead><tr><th>사용</th><th>출현범위</th><th>후보수</th><th>개수</th><th>필터명</th><th>출처</th><th></th></tr></thead><tbody id="condBody"></tbody></table></div>
   <div class="row" style="margin-top:12px"><button class="primary big" id="btnRun">조합 필터링 실행</button><span class="fsstate" id="fsState"></span><span class="muted" id="runNote"></span></div>
@@ -1050,6 +1051,16 @@ $('btnCondClear').addEventListener('click', ()=>{ ST.conds=[]; save(); renderCon
 function bulkTargets(){ const s=$('bulkScope').value; return ST.conds.filter(c=>(s==='all'||c.src===s)); }
 $('btnBulk').addEventListener('click', ()=>{ const a=Math.max(0,Math.min(6,+$('bulkMin').value||0)), b=Math.max(0,Math.min(6,+$('bulkMax').value||0)); const t=bulkTargets(); t.forEach(c=>{ if(c.src==='base'){ ST.ranges[c.fid]=[a,b]; return; } c.min=a;c.max=b; if(c.items) c.items.forEach(x=>{x.min=a;x.max=b;});}); if(t.some(c=>c.src==='base')){ recomputeBT(); renderCards(); } save(); renderConds(); toast(`${t.length}개 조건을 ${a}-${b}로 변경`); });
 $('btnBulkReset').addEventListener('click', resetRanges);
+// 조건완화: 지금 목록에 있는 해당 조건만 정해진 출현범위로
+const RELAX={all:[0,4], yesang:[0,3], h109:[0,3], dup:[0,3], nb1:[0,3], nb2:[0,3], diag:[0,3]};
+$('btnRelax').addEventListener('click', ()=>{
+  const byName={}; F.forEach(f=>{ if(RELAX[f.id]) byName[nameOf(f)]=RELAX[f.id]; });
+  const done=[]; let baseHit=false;
+  ST.conds.forEach(c=>{ const r = c.src==='base' ? RELAX[c.fid] : byName[c.name]; if(!r) return;
+    if(c.src==='base'){ ST.ranges[c.fid]=[r[0],r[1]]; baseHit=true; } else { c.min=r[0]; c.max=r[1]; if(c.items) c.items.forEach(x=>{x.min=r[0];x.max=r[1];}); }
+    c.min=r[0]; c.max=r[1]; done.push(`${c.name} ${r[0]}-${r[1]}`); });
+  if(!done.length) return toast('목록에 완화할 조건(전체숫자·두칸띄기·109회기·출현중복·이웃수1·2·대각)이 없습니다');
+  if(baseHit){ recomputeBT(); renderCards(); } save(); renderConds(); toast('조건완화: '+done.join(' · ')); });
 $('btnBulkOn').addEventListener('click', ()=>{ bulkTargets().forEach(c=>{ c.on=true; if(c.fid) ST.enabled[c.fid]=true; }); save(); renderCards(); renderConds(); });
 $('btnBulkOff').addEventListener('click', ()=>{ bulkTargets().forEach(c=>{ c.on=false; if(c.fid) ST.enabled[c.fid]=false; }); save(); renderCards(); renderConds(); });
 
