@@ -1,5 +1,5 @@
 // Service worker: offline use + versioned updates. Bump VERSION on every release.
-const VERSION = "1.0.13";
+const VERSION = "1.0.14";
 const CACHE = 'lotto-filter-' + VERSION;
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./lib/jsQR.js"];
 // install: always download fresh copies (bypass the browser HTTP cache) and take over right away
